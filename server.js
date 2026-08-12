@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const emailsRouter = require('./src/routes/emails');
 const authRouter = require('./src/routes/auth');
 const dashboardRouter = require('./src/routes/dashboard');
@@ -7,6 +8,7 @@ const dashboardRouter = require('./src/routes/dashboard');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(cors()); // allows the React frontend (different port) to call this API
 app.use(express.json()); // lets us read JSON request bodies
 
 app.get('/', (req, res) => {
