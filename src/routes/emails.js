@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const db = require('../services/db');
 const requireAuth = require('../middleware/auth');
 const { sendVerificationEmail } = require('../services/mailer');
+const { scanEmail } = require('../scanner');
 
 // POST /emails — logged-in user submits an email to monitor
 router.post('/emails', requireAuth, async (req, res) => {
@@ -13,7 +14,6 @@ router.post('/emails', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  // Enforce tier limits
   const userResult = await db.query('SELECT plan FROM users WHERE id=$1', [userId]);
   const { plan } = userResult.rows[0];
 
@@ -39,10 +39,11 @@ router.post('/emails', requireAuth, async (req, res) => {
   res.json({ status: 'pending_verification' });
 });
 
-// GET /emails/verify/:token — user clicks the link in their inbox (no auth needed — the token IS the proof)
+// GET /emails/verify/:token — user clicks the link in their inbox, this triggers the FIRST scan
 router.get('/emails/verify/:token', async (req, res) => {
   const result = await db.query(
-    `UPDATE monitored_emails SET verified=true, verify_token=null WHERE verify_token=$1 RETURNING id`,
+    `UPDATE monitored_emails SET verified=true, verify_token=null
+     WHERE verify_token=$1 RETURNING id, email`,
     [req.params.token]
   );
 
@@ -50,7 +51,20 @@ router.get('/emails/verify/:token', async (req, res) => {
     return res.status(400).send('Invalid or expired token');
   }
 
-  res.send('Email verified! Monitoring started.');
+  const { id: monitoredEmailId, email } = result.rows[0];
+
+  // Run the first ad-hoc scan now that ownership is confirmed
+  const breaches = await scanEmail(email);
+
+  for (const b of breaches) {
+    await db.query(
+      `INSERT INTO breach_events (monitored_email_id, breach_name, breach_date, data_classes)
+       VALUES ($1, $2, $3, $4)`,
+      [monitoredEmailId, b.Name, b.BreachDate, b.DataClasses]
+    );
+  }
+
+  res.send(`Email verified! Monitoring started. Found ${breaches.length} breach(es).`);
 });
 
 // GET /emails — list the logged-in user's monitored emails
