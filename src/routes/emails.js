@@ -1,51 +1,65 @@
 const router = require('express').Router();
 const crypto = require('crypto');
+const db = require('../services/db');
+const requireAuth = require('../middleware/auth');
 const { sendVerificationEmail } = require('../services/mailer');
 
-// Temporary in-memory store — replace with a real database (Step 5) later.
-const monitoredEmails = [];
-
-// POST /emails — user submits an email to monitor
-router.post('/emails', async (req, res) => {
+// POST /emails — logged-in user submits an email to monitor
+router.post('/emails', requireAuth, async (req, res) => {
   const { email } = req.body;
+  const userId = req.user.id;
 
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
+  // Enforce tier limits
+  const userResult = await db.query('SELECT plan FROM users WHERE id=$1', [userId]);
+  const { plan } = userResult.rows[0];
+
+  const countResult = await db.query(
+    'SELECT COUNT(*) FROM monitored_emails WHERE user_id=$1', [userId]
+  );
+  const currentCount = parseInt(countResult.rows[0].count, 10);
+
+  const limit = plan === 'family' ? 5 : 1;
+  if (currentCount >= limit) {
+    return res.status(403).json({ error: `Plan limit reached (${limit} emails)` });
+  }
+
   const token = crypto.randomBytes(32).toString('hex');
 
-  const record = {
-    id: monitoredEmails.length + 1,
-    email,
-    verified: false,
-    verifyToken: token,
-    createdAt: new Date()
-  };
-  monitoredEmails.push(record);
+  await db.query(
+    `INSERT INTO monitored_emails (user_id, email, verified, verify_token, created_at)
+     VALUES ($1, $2, false, $3, now())`,
+    [userId, email, token]
+  );
 
   await sendVerificationEmail(email, token);
-
   res.json({ status: 'pending_verification' });
 });
 
-// GET /emails/verify/:token — user clicks the link in their inbox
-router.get('/emails/verify/:token', (req, res) => {
-  const record = monitoredEmails.find(e => e.verifyToken === req.params.token);
+// GET /emails/verify/:token — user clicks the link in their inbox (no auth needed — the token IS the proof)
+router.get('/emails/verify/:token', async (req, res) => {
+  const result = await db.query(
+    `UPDATE monitored_emails SET verified=true, verify_token=null WHERE verify_token=$1 RETURNING id`,
+    [req.params.token]
+  );
 
-  if (!record) {
+  if (!result.rowCount) {
     return res.status(400).send('Invalid or expired token');
   }
-
-  record.verified = true;
-  record.verifyToken = null;
 
   res.send('Email verified! Monitoring started.');
 });
 
-// GET /emails — list what's being monitored (handy for testing)
-router.get('/emails', (req, res) => {
-  res.json(monitoredEmails);
+// GET /emails — list the logged-in user's monitored emails
+router.get('/emails', requireAuth, async (req, res) => {
+  const result = await db.query(
+    'SELECT id, email, verified, created_at FROM monitored_emails WHERE user_id=$1',
+    [req.user.id]
+  );
+  res.json(result.rows);
 });
 
 module.exports = router;
