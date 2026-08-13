@@ -3,6 +3,7 @@ const { Worker } = require('bullmq');
 const { scanEmail } = require('./src/scanner');
 const db = require('./src/services/db');
 const { sendBreachAlert } = require('./src/services/mailer');
+const startScheduler = require('./src/queue/scheduler');
 
 const connection = { url: process.env.REDIS_URL };
 
@@ -42,3 +43,5 @@ worker.on('failed', (job, err) => {
 });
 
 console.log('Worker started — waiting for scan jobs...');
+
+startScheduler();
