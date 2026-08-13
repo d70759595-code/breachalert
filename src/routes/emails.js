@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const db = require('../services/db');
 const requireAuth = require('../middleware/auth');
 const { sendVerificationEmail } = require('../services/mailer');
-const { scanEmail } = require('../scanner');
+const scanQueue = require('../queue/scanQueue');
 
 // POST /emails — logged-in user submits an email to monitor
 router.post('/emails', requireAuth, async (req, res) => {
@@ -39,7 +39,7 @@ router.post('/emails', requireAuth, async (req, res) => {
   res.json({ status: 'pending_verification' });
 });
 
-// GET /emails/verify/:token — user clicks the link in their inbox, this triggers the FIRST scan
+// GET /emails/verify/:token — user clicks the link in their inbox, this enqueues the FIRST scan
 router.get('/emails/verify/:token', async (req, res) => {
   const result = await db.query(
     `UPDATE monitored_emails SET verified=true, verify_token=null
@@ -53,18 +53,12 @@ router.get('/emails/verify/:token', async (req, res) => {
 
   const { id: monitoredEmailId, email } = result.rows[0];
 
-  // Run the first ad-hoc scan now that ownership is confirmed
-  const breaches = await scanEmail(email);
+  // Ownership confirmed — hand off to the queue worker instead of scanning inline.
+  // The worker process (running separately via `node worker.js`) will pick this up,
+  // scan the email, and save any breach events.
+  await scanQueue.add('scan', { monitoredEmailId, email });
 
-  for (const b of breaches) {
-    await db.query(
-      `INSERT INTO breach_events (monitored_email_id, breach_name, breach_date, data_classes)
-       VALUES ($1, $2, $3, $4)`,
-      [monitoredEmailId, b.Name, b.BreachDate, b.DataClasses]
-    );
-  }
-
-  res.send(`Email verified! Monitoring started. Found ${breaches.length} breach(es).`);
+  res.send('Email verified! Monitoring started — your first scan is in progress.');
 });
 
 // GET /emails — list the logged-in user's monitored emails
