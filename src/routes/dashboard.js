@@ -7,7 +7,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   const userId = req.user.id;
 
   const emails = await db.query(
-    `SELECT id, email, verified FROM monitored_emails WHERE user_id=$1`,
+    `SELECT id, email, verified, created_at FROM monitored_emails WHERE user_id=$1`,
     [userId]
   );
 
