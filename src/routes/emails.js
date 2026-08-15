@@ -30,8 +30,8 @@ router.post('/emails', requireAuth, async (req, res) => {
   const token = crypto.randomBytes(32).toString('hex');
 
   await db.query(
-    `INSERT INTO monitored_emails (user_id, email, verified, verify_token, created_at)
-     VALUES ($1, $2, false, $3, now())`,
+    `INSERT INTO monitored_emails (user_id, email, verified, verify_token, created_at, verify_token_expires_at)
+     VALUES ($1, $2, false, $3, now(), now() + interval '24 hours')`,
     [userId, email, token]
   );
 
@@ -43,12 +43,13 @@ router.post('/emails', requireAuth, async (req, res) => {
 router.get('/emails/verify/:token', async (req, res) => {
   const result = await db.query(
     `UPDATE monitored_emails SET verified=true, verify_token=null
-     WHERE verify_token=$1 RETURNING id, email`,
+     WHERE verify_token=$1 AND verify_token_expires_at > now()
+     RETURNING id, email`,
     [req.params.token]
   );
 
   if (!result.rowCount) {
-    return res.status(400).send('Invalid or expired token');
+    return res.status(400).send('Invalid or expired token. Please request a new verification link.');
   }
 
   const { id: monitoredEmailId, email } = result.rows[0];
@@ -63,8 +64,6 @@ router.post('/emails/:id/scan-now', requireAuth, async (req, res) => {
   const emailId = req.params.id;
   const userId = req.user.id;
 
-  // Confirm this email actually belongs to the logged-in user, and is verified —
-  // prevents one user from triggering a scan on someone else's monitored email by guessing an ID.
   const result = await db.query(
     `SELECT id, email, verified FROM monitored_emails WHERE id=$1 AND user_id=$2`,
     [emailId, userId]
