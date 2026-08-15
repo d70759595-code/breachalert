@@ -60,14 +60,14 @@ router.get('/auth/google', passport.authenticate('google', {
 
 // GET /auth/google/callback — Google redirects here after the user logs in
 router.get('/auth/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/' }),
+  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
   (req, res) => {
     const user = req.user;
     const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    // Redirect back to the frontend with the token as a query param.
+    // Redirect back to the frontend dashboard with the token as a query param.
     // The frontend will read it and store it, then clean up the URL.
-    res.redirect(`${process.env.APP_BASE_URL.replace('3000', '5173')}/?token=${token}`);
+    res.redirect(`${process.env.APP_BASE_URL.replace('3000', '5173')}/dashboard?token=${token}`);
   }
 );
 
