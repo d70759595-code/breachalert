@@ -13,6 +13,17 @@ function App() {
   const [newEmail, setNewEmail] = useState('');
   const [addStatus, setAddStatus] = useState('');
 
+  // On first load, check if Google just redirected back with a token in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    if (urlToken) {
+      setToken(urlToken);
+      // Clean the token out of the visible URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   async function handleLogin(e) {
     e.preventDefault();
     setAuthError('');
@@ -45,6 +56,10 @@ function App() {
     } catch (err) {
       setAuthError(err.message);
     }
+  }
+
+  function handleGoogleLogin() {
+    window.location.href = `${API_BASE}/auth/google`;
   }
 
   function loadDashboard(activeToken) {
@@ -86,7 +101,6 @@ function App() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Scan request failed');
-      // Give the worker a moment to process, then refresh the dashboard.
       setTimeout(() => loadDashboard(token), 2000);
     } catch (err) {
       console.error(err);
@@ -103,6 +117,25 @@ function App() {
             <h1 className="font-display text-2xl font-bold text-on-surface tracking-tight">BreachAlert</h1>
           </div>
           <p className="font-body text-sm text-on-surface-variant/70 mb-8">Sign in to your security console.</p>
+
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-medium text-sm py-3 rounded-lg hover:bg-gray-100 transition-all mb-6"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.12-.84 2.07-1.8 2.71v2.26h2.92c1.7-1.57 2.68-3.87 2.68-6.61z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33C2.44 15.98 5.48 18 9 18z"/>
+              <path fill="#FBBC05" d="M3.97 10.72c-.18-.54-.28-1.12-.28-1.72s.1-1.18.28-1.72V4.95H.96A8.996 8.996 0 000 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+            </svg>
+            Sign in with Google
+          </button>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-white/10"></div>
+            <span className="font-mono text-[10px] text-outline-variant uppercase">or</span>
+            <div className="flex-1 h-px bg-white/10"></div>
+          </div>
 
           <form className="space-y-4">
             <div>

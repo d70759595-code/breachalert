@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const passport = require('../config/passportGoogle');
 const db = require('../services/db');
 
 const SALT_ROUNDS = 10;
@@ -38,7 +39,7 @@ router.post('/auth/login', async (req, res) => {
   const result = await db.query('SELECT * FROM users WHERE email=$1', [email]);
   const user = result.rows[0];
 
-  if (!user) {
+  if (!user || !user.password_hash) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
@@ -48,8 +49,26 @@ router.post('/auth/login', async (req, res) => {
   }
 
   const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
   res.json({ token, user: { id: user.id, email: user.email, plan: user.plan } });
 });
+
+// GET /auth/google — kicks off the Google login flow
+router.get('/auth/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  session: false
+}));
+
+// GET /auth/google/callback — Google redirects here after the user logs in
+router.get('/auth/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/' }),
+  (req, res) => {
+    const user = req.user;
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    // Redirect back to the frontend with the token as a query param.
+    // The frontend will read it and store it, then clean up the URL.
+    res.redirect(`${process.env.APP_BASE_URL.replace('3000', '5173')}/?token=${token}`);
+  }
+);
 
 module.exports = router;
