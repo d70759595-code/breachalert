@@ -53,12 +53,36 @@ router.get('/emails/verify/:token', async (req, res) => {
 
   const { id: monitoredEmailId, email } = result.rows[0];
 
-  // Ownership confirmed — hand off to the queue worker instead of scanning inline.
-  // The worker process (running separately via `node worker.js`) will pick this up,
-  // scan the email, and save any breach events.
   await scanQueue.add('scan', { monitoredEmailId, email });
 
   res.send('Email verified! Monitoring started — your first scan is in progress.');
+});
+
+// POST /emails/:id/scan-now — manually trigger a scan for one of the user's own verified emails
+router.post('/emails/:id/scan-now', requireAuth, async (req, res) => {
+  const emailId = req.params.id;
+  const userId = req.user.id;
+
+  // Confirm this email actually belongs to the logged-in user, and is verified —
+  // prevents one user from triggering a scan on someone else's monitored email by guessing an ID.
+  const result = await db.query(
+    `SELECT id, email, verified FROM monitored_emails WHERE id=$1 AND user_id=$2`,
+    [emailId, userId]
+  );
+
+  if (!result.rowCount) {
+    return res.status(404).json({ error: 'Email not found' });
+  }
+
+  const { email, verified } = result.rows[0];
+
+  if (!verified) {
+    return res.status(400).json({ error: 'Email is not verified yet' });
+  }
+
+  await scanQueue.add('scan', { monitoredEmailId: emailId, email });
+
+  res.json({ status: 'scan_queued' });
 });
 
 // GET /emails — list the logged-in user's monitored emails

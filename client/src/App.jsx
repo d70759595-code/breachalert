@@ -79,6 +79,20 @@ function App() {
     }
   }
 
+  async function handleScanNow(emailId) {
+    try {
+      const res = await fetch(`${API_BASE}/emails/${emailId}/scan-now`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Scan request failed');
+      // Give the worker a moment to process, then refresh the dashboard.
+      setTimeout(() => loadDashboard(token), 2000);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   // ---------- LOGGED OUT: Login / Signup ----------
   if (!token) {
     return (
@@ -221,7 +235,7 @@ function App() {
 
         {/* Right column */}
         <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
-          <EmailList emails={emails} verifiedCount={verifiedCount} />
+          <EmailList emails={emails} verifiedCount={verifiedCount} onScanNow={handleScanNow} />
         </div>
       </div>
     </div>
