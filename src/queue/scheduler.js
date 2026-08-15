@@ -2,11 +2,11 @@ const cron = require('node-cron');
 const db = require('../services/db');
 const scanQueue = require('./scanQueue');
 
-// Runs every 6 hours — enqueues a scan for every verified email, regardless of plan.
-// (Originally spec'd as family-plan-only nightly scans; extended per updated requirements
-// to cover all verified emails at a shorter interval.)
+// Runs every 15 minutes — enqueues a scan for every verified email, regardless of plan.
+// Safe to run this often because scanEmail() caches results in Redis for 24h,
+// so repeated sweeps mostly hit the cache instead of re-calling the real API.
 function startScheduler() {
-  cron.schedule('0 */6 * * *', async () => {
+  cron.schedule('*/15 * * * *', async () => {
     console.log('[scheduler] Running scheduled scan sweep...');
 
     const { rows } = await db.query(
@@ -20,7 +20,7 @@ function startScheduler() {
     console.log(`[scheduler] Enqueued ${rows.length} scan(s).`);
   });
 
-  console.log('Scheduler registered (runs every 6 hours for all verified emails).');
+  console.log('Scheduler registered (runs every 15 minutes for all verified emails).');
 }
 
 module.exports = startScheduler;
