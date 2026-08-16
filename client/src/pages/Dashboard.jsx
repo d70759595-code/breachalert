@@ -63,8 +63,13 @@ function Dashboard({ token, onLogout }) {
 
   const emails = dashboard?.emails || [];
   const timeline = dashboard?.timeline || [];
-  const verifiedCount = emails.filter(e => e.verified).length;
-  const healthScore = emails.length === 0 ? 100 : Math.round(((emails.length - timeline.length) / emails.length) * 100);
+  const verifiedEmails = emails.filter(e => e.verified);
+  const verifiedCount = verifiedEmails.length;
+  const breachedEmailIds = new Set(timeline.map(ev => ev.monitored_email_id));
+  const breachedCount = verifiedEmails.filter(e => breachedEmailIds.has(e.id)).length;
+  const healthScore = verifiedCount === 0
+    ? 100
+    : Math.round(((verifiedCount - breachedCount) / verifiedCount) * 100);
   const scoreClamped = Math.max(0, Math.min(100, healthScore));
   const circumference = 2 * Math.PI * 45;
   const dashOffset = circumference - (scoreClamped / 100) * circumference;

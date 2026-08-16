@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node --use-system-ca server.js",
+    "worker": "node --use-system-ca worker.js",
+    "test:scanner": "node --use-system-ca testScanner.js",
+    "dev:client": "npm run dev --prefix client"
   },
   "repository": {
     "type": "git",

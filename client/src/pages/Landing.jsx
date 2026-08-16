@@ -1,35 +1,37 @@
-import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const THREAT_FEED = [
-  { icon: 'terminal', title: 'Credential Leak Detected', desc: "Database dump containing 21M records analyzed on dark web forum [Redacted].", time: 'Just now', color: 'error' },
-  { icon: 'hub', title: 'New Botnet Activity', desc: 'Surge in stealer malware logs targeting financial sectors in North America.', time: '12s ago', color: 'tertiary' },
-  { icon: 'business', title: 'Enterprise Domain Exposure', desc: 'Corporate email addresses matching known SaaS compromise pattern.', time: '46s ago', color: 'tertiary' }
+  { title: 'Credential Dump Discovered', desc: 'Database leak containing 21.4M records analyzed on dark web forum.', time: 'Just now', severity: 'CRITICAL', color: 'text-[#FF3B30] bg-[#FF3B30]/15 border-[#FF3B30]/30' },
+  { title: 'Stealer Malware Activity Surge', desc: 'Surge in RedLine & Lumma stealer logs targeting web browser credentials.', time: '12s ago', severity: 'HIGH', color: 'text-[#FFB020] bg-[#FFB020]/15 border-[#FFB020]/30' },
+  { title: 'SaaS Domain Exposure', desc: 'Corporate email addresses matching known OAuth compromise pattern.', time: '46s ago', severity: 'WARNING', color: 'text-[#FF6A2A] bg-[#FF6A2A]/15 border-[#FF6A2A]/30' }
 ];
 
 const FEATURES = [
-  { icon: 'travel_explore', title: 'Deep Web Recon', desc: 'Continuous scraping of dark forums, telegram channels, and automated botnet logs.' },
-  { icon: 'notifications_active', title: 'Zero-Day Alerts', desc: 'Instant notifications via SMS or email the second your data appears in a new dump.' },
-  { icon: 'radar', title: 'Contextual Risk', desc: 'Analyze breach severity and provide clear, actionable remediation steps immediately.' },
-  { icon: 'fingerprint', title: 'Identity Tracking', desc: 'Monitor SSNs, credit cards, and addresses. Secure your entire digital footprint.' }
+  { title: 'AI Breach Detection', desc: 'Continuous neural scraping of dark web forums, telegram channels, and automated botnet logs.' },
+  { title: 'Zero-Day Alerts', desc: 'Instant push, SMS, or email notifications the second your data appears in a new database dump.' },
+  { title: 'Contextual Risk Scoring', desc: 'Analyze breach severity and provide clear, actionable remediation protocols immediately.' },
+  { title: 'Identity Safeguard', desc: 'Monitor email addresses, passwords, credit card leaks, and corporate domain exposures.' }
 ];
 
 function NavBar() {
   return (
-    <nav className="flex items-center justify-between px-6 md:px-10 py-5 border-b border-white/5">
+    <nav className="flex items-center justify-between px-6 md:px-10 py-5 border-b border-white/[0.08] backdrop-blur-xl bg-[#0F0F0F]/80">
       <Link to="/" className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-primary">shield_person</span>
-        <span className="font-display font-bold text-on-surface">BreachAlert</span>
+        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+          <span className="font-bold text-[#FF6A2A]">🛡</span>
+        </div>
+        <span className="font-bold text-white tracking-tight">BREACH<span className="text-[#FF6A2A]">ALERT</span></span>
       </Link>
-      <div className="hidden md:flex items-center gap-8 font-body text-sm text-on-surface-variant">
-        <a href="#features" className="hover:text-primary transition-colors">Features</a>
-        <Link to="/pricing" className="hover:text-primary transition-colors">Pricing</Link>
-        <a href="#" className="hover:text-primary transition-colors">Enterprise</a>
-        <Link to="/support" className="hover:text-primary transition-colors">Support</Link>
+      <div className="hidden md:flex items-center gap-8 text-xs font-medium text-neutral-300">
+        <a href="#features" className="hover:text-white transition-colors">Features</a>
+        <Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+        <a href="#threat-intel" className="hover:text-white transition-colors">Security</a>
+        <Link to="/support" className="hover:text-white transition-colors">Support</Link>
       </div>
       <div className="flex items-center gap-4">
-        <Link to="/login" className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors">Login</Link>
-        <Link to="/login" className="bg-primary text-white font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-blue-600 transition-all glow-primary">
+        <Link to="/login" className="text-xs font-medium text-neutral-300 hover:text-white transition-colors">Login</Link>
+        <Link to="/login" className="bg-gradient-to-r from-[#FF6A2A] to-[#FF8243] text-black font-semibold text-xs px-4 py-2 rounded-full hover:brightness-110 transition-all shadow-[0_0_20px_rgba(255,106,42,0.4)]">
           Get Started
         </Link>
       </div>
@@ -41,106 +43,109 @@ function Landing() {
   const [scanInput, setScanInput] = useState('');
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#070707] text-white">
       <NavBar />
 
       {/* Hero */}
-      <section className="px-6 md:px-10 py-16 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-error/10 border border-error/20 px-3 py-1.5 rounded-full mb-6">
-              <span className="w-2 h-2 rounded-full bg-error animate-pulse"></span>
-              <span className="font-mono text-[11px] text-error uppercase tracking-wide">Live: 12.4M Threats Detected Today</span>
-            </div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-on-surface leading-tight mb-6">
-              Stop Breaches Before<br />
-              <span className="text-primary">They Escalate.</span>
-            </h1>
-            <p className="font-body text-on-surface-variant/80 text-lg mb-8 max-w-md">
-              Proactive dark web reconnaissance and real-time alerts. Ensure your digital footprint remains secure against emerging threats.
-            </p>
-            <form className="flex gap-2 mb-4" onSubmit={e => e.preventDefault()}>
-              <input
-                type="text"
-                value={scanInput}
-                onChange={e => setScanInput(e.target.value)}
-                placeholder="Enter email or domain to scan..."
-                className="flex-1 bg-surface-container-low border border-white/10 rounded-lg px-4 py-3 font-mono text-sm text-on-surface focus:outline-none focus:border-primary/60"
-              />
-              <Link
-                to="/login"
-                className="flex items-center gap-2 bg-primary text-white font-mono text-xs uppercase tracking-widest px-5 py-3 rounded-lg hover:bg-blue-600 transition-all glow-primary whitespace-nowrap"
-              >
-                <span className="material-symbols-outlined text-sm">search</span> Deep Scan
-              </Link>
-            </form>
-            <div className="flex items-center gap-6 font-mono text-[11px] text-outline-variant">
-              <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">lock</span> 256-bit Encryption</span>
-              <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">block</span> Zero Data Retention</span>
-            </div>
+      <section className="px-6 md:px-10 py-20 max-w-7xl mx-auto text-center relative overflow-hidden">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#FF6A2A]/20 blur-[130px] pointer-events-none rounded-full" />
+        
+        <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#141414] border border-white/[0.12] text-xs text-neutral-300 mb-6">
+            <span>Real-time breach monitoring is now live</span>
+            <span className="w-4 h-4 rounded-full bg-[#FF6A2A] text-black flex items-center justify-center text-[10px] font-bold">→</span>
           </div>
 
-          <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden">
-            <div className="flex justify-between items-center px-5 py-4 border-b border-white/5">
-              <span className="font-mono text-xs text-on-surface uppercase tracking-widest flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-sm">podcasts</span> Global Threat Feed
-              </span>
-              <span className="font-mono text-[10px] text-outline-variant">Updating live...</span>
+          <h1 className="text-4xl md:text-6xl font-semibold text-white tracking-tight leading-tight mb-6">
+            Stay Ahead of Data Breaches With AI
+          </h1>
+
+          <p className="text-[#929292] text-base md:text-lg max-w-2xl mb-8">
+            AI-powered breach monitoring and identity protection. Detect exposed data early, monitor your digital identity, and take action before threats become problems.
+          </p>
+
+          <form className="flex flex-col sm:flex-row gap-3 mb-10 w-full max-w-lg" onSubmit={e => e.preventDefault()}>
+            <input
+              type="text"
+              value={scanInput}
+              onChange={e => setScanInput(e.target.value)}
+              placeholder="Enter email to scan..."
+              className="flex-1 bg-[#141414] border border-white/[0.12] rounded-full px-5 py-3 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#FF6A2A]"
+            />
+            <Link
+              to="/login"
+              className="bg-gradient-to-r from-[#FF6A2A] to-[#FF8243] text-black font-bold text-xs px-6 py-3 rounded-full hover:brightness-110 transition-all shadow-[0_0_20px_rgba(255,106,42,0.4)] whitespace-nowrap flex items-center justify-center gap-1.5"
+            >
+              Start Monitoring →
+            </Link>
+          </form>
+
+          {/* Horizon Arc Effect */}
+          <div className="w-full horizon-arc-container my-4">
+            <div className="horizon-arc-glow-bg" />
+            <div className="horizon-arc-line" />
+            <div className="absolute top-10 text-center w-full">
+              <p className="text-xs uppercase tracking-widest text-neutral-400 font-semibold mb-3">Trusted by security-conscious teams</p>
+              <div className="flex justify-center gap-8 text-xs text-neutral-300">
+                <span>🔒 256-bit Encrypted</span>
+                <span>⚡ Real-Time Monitoring</span>
+                <span>🛡 Privacy First</span>
+              </div>
             </div>
-            <div className="divide-y divide-white/5">
-              {THREAT_FEED.map((t, i) => (
-                <div key={i} className="flex gap-3 px-5 py-4">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-${t.color}/10 text-${t.color} border border-${t.color}/20`}>
-                    <span className="material-symbols-outlined text-lg">{t.icon}</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Live Threat Feed */}
+      <section id="threat-intel" className="px-6 md:px-10 py-16 max-w-6xl mx-auto text-left">
+        <div className="rounded-3xl bg-[#141414] border border-white/[0.08] p-8 shadow-2xl">
+          <div className="flex justify-between items-center pb-4 mb-6 border-b border-white/[0.06]">
+            <span className="font-mono text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#FF6A2A] animate-pulse" /> Live Global Threat Stream
+            </span>
+            <span className="font-mono text-[10px] text-[#35D07F] bg-[#35D07F]/10 px-2.5 py-0.5 rounded-full border border-[#35D07F]/20">● LIVE RECON</span>
+          </div>
+          <div className="space-y-4">
+            {THREAT_FEED.map((t, i) => (
+              <div key={i} className="p-4 rounded-2xl bg-[#0D0D0D] border border-white/[0.06] flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-white">{t.title}</p>
+                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded border font-bold ${t.color}`}>{t.severity}</span>
                   </div>
-                  <div>
-                    <p className={`font-body text-sm font-semibold text-${t.color}`}>{t.title}</p>
-                    <p className="font-body text-xs text-on-surface-variant/70 mt-0.5">{t.desc}</p>
-                    <p className="font-mono text-[10px] text-outline-variant mt-1">{t.time}</p>
-                  </div>
+                  <p className="text-xs text-[#929292] mt-1">{t.desc}</p>
                 </div>
-              ))}
-            </div>
+                <span className="font-mono text-[11px] text-neutral-500 shrink-0">{t.time}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Features */}
-      <section id="features" className="px-6 md:px-10 py-16 max-w-7xl mx-auto">
-        <h2 className="font-display text-2xl md:text-3xl font-bold text-on-surface text-center mb-12">The Monitoring Engine</h2>
+      <section id="features" className="px-6 md:px-10 py-16 max-w-6xl mx-auto text-left">
+        <h2 className="text-3xl font-semibold text-white text-center mb-12">Your Digital Identity. Always Protected.</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {FEATURES.map((f, i) => (
-            <div key={i} className="glass-panel rounded-2xl p-6 border border-white/5">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-primary">{f.icon}</span>
+            <div key={i} className="p-6 rounded-3xl bg-[#141414] border border-white/[0.08] hover:border-[#FF6A2A]/40 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-[#FF6A2A]/10 border border-[#FF6A2A]/20 flex items-center justify-center mb-4 text-[#FF6A2A] font-bold">
+                🛡
               </div>
-              <h3 className="font-display font-bold text-on-surface mb-2">{f.title}</h3>
-              <p className="font-body text-sm text-on-surface-variant/70">{f.desc}</p>
+              <h3 className="font-semibold text-white mb-2">{f.title}</h3>
+              <p className="text-xs text-[#929292] leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Trusted by */}
-      <section className="px-6 md:px-10 py-12 max-w-7xl mx-auto">
-        <div className="glass-panel rounded-2xl p-10 border border-white/5 text-center">
-          <p className="font-mono text-xs text-outline-variant uppercase tracking-widest mb-6">Trusted by security teams worldwide</p>
-          <div className="flex flex-wrap justify-center gap-10 font-display font-semibold text-on-surface-variant/60 text-lg">
-            <span>SentinelTech</span>
-            <span>CipherGrid</span>
-            <span>ArmorCloud</span>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="px-6 md:px-10 py-8 border-t border-white/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="font-body text-xs text-outline-variant">© 2026 BreachAlert Security. All rights reserved.</p>
-          <div className="flex gap-6 font-body text-xs text-outline-variant">
-            <Link to="/support" className="hover:text-primary transition-colors">Support</Link>
-            <span>Privacy Policy</span>
-            <span>Terms of Service</span>
+      <footer className="px-6 md:px-10 py-8 border-t border-white/[0.08] bg-[#070707]">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-neutral-500">
+          <p>© {new Date().getFullYear()} BreachAlert Inc. All rights reserved.</p>
+          <div className="flex gap-6">
+            <Link to="/support" className="hover:text-white transition-colors">Support</Link>
+            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
           </div>
         </div>
       </footer>

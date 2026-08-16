@@ -74,7 +74,7 @@ function Pricing() {
             </div>
             <ul className="space-y-3 mb-8 flex-1">
               <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> Up to 5 Email Addresses</li>
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">sync</span> Automated Scans (every 15 min)</li>
+              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">sync</span> Automated Daily Scans</li>
               <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">mail</span> Instant Email Alerts</li>
               <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">travel_explore</span> Dark Web Monitoring</li>
               <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">support_agent</span> Priority Support</li>

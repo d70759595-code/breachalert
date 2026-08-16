@@ -7,9 +7,11 @@ import Support from './pages/Support';
 import Settings from './pages/Settings';
 import Dashboard from './pages/Dashboard';
 
+const TOKEN_KEY = 'breachalert_token';
+
 function getInitialToken() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('token') || null;
+  return params.get('token') || localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || null;
 }
 
 function App() {
@@ -18,16 +20,27 @@ function App() {
   // Clean the ?token=... out of the visible URL once we've captured it into state.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('token')) {
+    const urlToken = params.get('token');
+    if (urlToken) {
+      localStorage.setItem(TOKEN_KEY, urlToken);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
-  function handleLogin(newToken) {
+  function handleLogin(newToken, remember = false) {
+    if (remember) {
+      localStorage.setItem(TOKEN_KEY, newToken);
+      sessionStorage.removeItem(TOKEN_KEY);
+    } else {
+      sessionStorage.setItem(TOKEN_KEY, newToken);
+      localStorage.removeItem(TOKEN_KEY);
+    }
     setToken(newToken);
   }
 
   function handleLogout() {
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
     setToken(null);
   }
 

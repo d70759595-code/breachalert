@@ -1,5 +1,6 @@
 const axios = require('axios');
 
+// Uses XposedOrNot (spec allows HIBP alternatives). See docs/API_INTEGRATION.md to switch to HIBP.
 const XON_BASE = 'https://api.xposedornot.com/v1';
 
 function normalizeBreachDate(dateValue) {

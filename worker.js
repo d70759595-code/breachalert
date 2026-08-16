@@ -7,11 +7,27 @@ const startScheduler = require('./src/queue/scheduler');
 
 const connection = { url: process.env.REDIS_URL };
 
+async function scanWithRetry(email, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await scanEmail(email);
+    } catch (err) {
+      if (err.message === 'RATE_LIMITED' && attempt < maxRetries - 1) {
+        const delayMs = 2000 * (attempt + 1);
+        console.log(`[worker] Rate limited on ${email}, retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 const worker = new Worker('email-scan', async job => {
   const { monitoredEmailId, email } = job.data;
   console.log(`[worker] Scanning ${email} (job ${job.id})...`);
 
-  const breaches = await scanEmail(email);
+  const breaches = await scanWithRetry(email);
   let newBreachCount = 0;
 
   for (const b of breaches) {
