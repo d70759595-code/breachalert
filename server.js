@@ -2,7 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
+const db = require('./src/services/db');
+const redisClient = require('./src/services/redisClient');
 const passport = require('./src/config/passportGoogle');
 const emailsRouter = require('./src/routes/emails');
 const authRouter = require('./src/routes/auth');
@@ -11,36 +14,89 @@ const dashboardRouter = require('./src/routes/dashboard');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet()); // sets security-related HTTP headers
-app.use(cors()); // allows the React frontend (different port) to call this API
-app.use(express.json()); // lets us read JSON request bodies
-app.use(passport.initialize()); // sets up Google OAuth handling
+// Security & Middlewares
+app.use(helmet());
+app.use(cookieParser());
 
+// Configured CORS to allow credentials with environment-based allowed origin
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+app.use(cors({
+  origin: allowedOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json({ limit: '100kb' }));
+app.use(passport.initialize());
+
+// Rate limiters
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: 'Too many requests, please try again later.' }
+  max: 200,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests, please try again later.' } }
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'Too many login attempts, please try again later.' }
-});
-
-app.use(generalLimiter);
-
-app.get('/', (req, res) => {
-  res.send('BreachAlert server is running!');
+  max: 15,
+  message: { success: false, error: { code: 'TOO_MANY_AUTH_ATTEMPTS', message: 'Too many authentication attempts, please try again in 15 minutes.' } }
 });
 
 app.use('/auth/login', authLimiter);
 app.use('/auth/signup', authLimiter);
+app.use('/auth/forgot-password', authLimiter);
+app.use('/auth/reset-password', authLimiter);
+app.use(generalLimiter);
 
-app.use('/', authRouter);      // adds POST /auth/signup, POST /auth/login, GET /auth/google(/callback)
-app.use('/', emailsRouter);    // adds POST /emails, GET /emails/verify/:token, GET /emails
-app.use('/', dashboardRouter); // adds GET /dashboard
+// Health Check Endpoint (Verifies PostgreSQL & Redis connections)
+app.get('/health', async (req, res) => {
+  let dbOk = false;
+  let redisOk = false;
 
-app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
+  try {
+    await db.query('SELECT 1');
+    dbOk = true;
+  } catch (err) {}
+
+  try {
+    const ping = await redisClient.ping();
+    if (ping === 'PONG') redisOk = true;
+  } catch (err) {}
+
+  const isHealthy = dbOk && redisOk;
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'OK' : 'DEGRADED',
+    timestamp: new Date().toISOString(),
+    services: {
+      database: dbOk ? 'CONNECTED' : 'DISCONNECTED',
+      redis: redisOk ? 'CONNECTED' : 'DISCONNECTED'
+    }
+  });
 });
+
+// App Routes
+app.use('/', authRouter);
+app.use('/', emailsRouter);
+app.use('/', dashboardRouter);
+
+// Centralized Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('[server error]', err.stack || err);
+  const isDev = process.env.NODE_ENV !== 'production';
+  res.status(err.status || 500).json({
+    success: false,
+    error: {
+      code: err.code || 'INTERNAL_SERVER_ERROR',
+      message: isDev ? err.message : 'An unexpected server error occurred. Please try again later.'
+    }
+  });
+});
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`BreachAlert security server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

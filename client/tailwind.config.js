@@ -8,32 +8,42 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#10131a",
-        "on-background": "#e1e2ec",
-        surface: "#10131a",
-        "surface-container-lowest": "#0b0e15",
-        "surface-container-low": "#191b23",
-        "surface-container": "#1d2027",
-        "surface-container-high": "#272a31",
-        "surface-container-highest": "#32353c",
-        "surface-variant": "#32353c",
-        "on-surface": "#e1e2ec",
-        "on-surface-variant": "#c2c6d6",
-        outline: "#8c909f",
+        background: "#070707",
+        "bg-primary": "#070707",
+        "bg-secondary": "#0D0D0D",
+        "bg-card": "#121212",
+        "bg-card-hover": "#181818",
+        
+        "on-background": "#F5F5F5",
+        "on-surface": "#F5F5F5",
+        "on-surface-variant": "#969696",
+        "muted-text": "#626262",
         "outline-variant": "#424754",
-        primary: "#3b82f6",
-        "primary-container": "#4d8eff",
-        error: "#ffb4ab",
-        "error-container": "#93000a",
-        tertiary: "#ffb786",
-        "tertiary-container": "#df7412",
-        success: "#34d399",
+
+        primary: "#FF6A2A",
+        "primary-bright": "#FF7A3D",
+        "primary-glow": "rgba(255, 90, 30, 0.35)",
+
+        error: "#FF4D4D",
+        danger: "#FF4D4D",
+        success: "#45D483",
+        tertiary: "#FF985C",
       },
       fontFamily: {
-        display: ["Geist", "sans-serif"],
+        display: ["Inter", "Geist", "sans-serif"],
         body: ["Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
+      animation: {
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 5s ease-in-out infinite',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-6px)' },
+        }
+      }
     },
   },
   plugins: [],

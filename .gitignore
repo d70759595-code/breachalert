@@ -1,2 +1,27 @@
+# Dependencies & OS
 node_modules/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# Environment Variables & Secrets
 .env
+.env.local
+.env.production
+.env.*
+!.env.example
+
+# Build Outputs
+dist/
+build/
+coverage/
+.cache/
+
+# IDE Files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

@@ -1,74 +1,206 @@
 const router = require('express').Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { body, validationResult } = require('express-validator');
 const passport = require('../config/passportGoogle');
 const db = require('../services/db');
+const requireAuth = require('../middleware/auth');
+const { sendVerificationEmail } = require('../services/mailer');
 
 const SALT_ROUNDS = 10;
+const TOKEN_EXPIRY = '7d';
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+};
 
-// POST /auth/signup
-router.post('/auth/signup', async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
-
-  const existing = await db.query('SELECT id FROM users WHERE email=$1', [email]);
-  if (existing.rows.length) {
-    return res.status(409).json({ error: 'An account with that email already exists' });
-  }
-
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-
-  const result = await db.query(
-    `INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, plan`,
-    [email, passwordHash]
+// Helper: Set HttpOnly cookie & return clean user payload
+function sendAuthResponse(res, user, statusCode = 200) {
+  const token = jwt.sign(
+    { id: user.id, email: user.email },
+    process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
+    { expiresIn: TOKEN_EXPIRY }
   );
 
-  const user = result.rows[0];
-  const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  res.cookie('token', token, COOKIE_OPTIONS);
+  return res.status(statusCode).json({
+    success: true,
+    user: { id: user.id, email: user.email, plan: user.plan }
+  });
+}
 
-  res.json({ token, user });
+// GET /auth/me — Check auth state using HttpOnly cookie
+router.get('/auth/me', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query('SELECT id, email, plan, created_at FROM users WHERE id = $1', [req.user.id]);
+    if (!result.rowCount) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } });
+    }
+    res.json({ success: true, user: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: 'Server error checking authentication status' } });
+  }
+});
+
+// POST /auth/signup
+router.post('/auth/signup', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, error: { message: errors.array()[0].msg } });
+  }
+
+  const { email, password } = req.body;
+
+  try {
+    const existing = await db.query('SELECT id FROM users WHERE email=$1', [email]);
+    if (existing.rows.length) {
+      return res.status(409).json({ success: false, error: { message: 'An account with that email already exists' } });
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const result = await db.query(
+      `INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, plan`,
+      [email, passwordHash]
+    );
+
+    const user = result.rows[0];
+    sendAuthResponse(res, user, 201);
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: 'Internal server error during registration' } });
+  }
 });
 
 // POST /auth/login
-router.post('/auth/login', async (req, res) => {
+router.post('/auth/login', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('password').notEmpty().withMessage('Password required')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, error: { message: 'Invalid credentials provided' } });
+  }
+
   const { email, password } = req.body;
 
-  const result = await db.query('SELECT * FROM users WHERE email=$1', [email]);
-  const user = result.rows[0];
+  try {
+    const result = await db.query('SELECT * FROM users WHERE email=$1', [email]);
+    const user = result.rows[0];
 
-  if (!user || !user.password_hash) {
-    return res.status(401).json({ error: 'Invalid email or password' });
+    // Generic error message to prevent account enumeration
+    if (!user || !user.password_hash) {
+      return res.status(401).json({ success: false, error: { message: 'Invalid email or password' } });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatches) {
+      return res.status(401).json({ success: false, error: { message: 'Invalid email or password' } });
+    }
+
+    sendAuthResponse(res, user);
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: 'Internal server error during login' } });
   }
-
-  const passwordMatches = await bcrypt.compare(password, user.password_hash);
-  if (!passwordMatches) {
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
-
-  const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { id: user.id, email: user.email, plan: user.plan } });
 });
 
-// GET /auth/google — kicks off the Google login flow
+// POST /auth/logout
+router.post('/auth/logout', (req, res) => {
+  res.clearCookie('token', COOKIE_OPTIONS);
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// GET /auth/google — Google OAuth start
 router.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
   session: false
 }));
 
-// GET /auth/google/callback — Google redirects here after the user logs in
+// GET /auth/google/callback — Google OAuth Callback with HttpOnly cookie redirect
 router.get('/auth/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+  passport.authenticate('google', { session: false, failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_failed` }),
   (req, res) => {
     const user = req.user;
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
+      { expiresIn: TOKEN_EXPIRY }
+    );
 
-    // Redirect back to the frontend dashboard with the token as a query param.
-    // The frontend will read it and store it, then clean up the URL.
-    res.redirect(`${process.env.APP_BASE_URL.replace('3000', '5173')}/dashboard?token=${token}`);
+    // Set HttpOnly cookie securely without exposing token in URL query string
+    res.cookie('token', token, COOKIE_OPTIONS);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard`);
   }
 );
+
+// POST /auth/forgot-password
+router.post('/auth/forgot-password', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, error: { message: 'Email is required' } });
+
+  try {
+    const userRes = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (userRes.rowCount > 0) {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+      await db.query(
+        `UPDATE users SET reset_token_hash = $1, reset_token_expires_at = NOW() + INTERVAL '1 hour' WHERE id = $2`,
+        [resetTokenHash, userRes.rows[0].id]
+      );
+
+      console.log(`\n[STUB EMAIL] Password reset token for ${email}: ${resetToken}`);
+      console.log(`Reset URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}\n`);
+    }
+
+    // Always respond with success to prevent account enumeration
+    res.json({ success: true, message: 'If an account exists with that email, a password reset link has been dispatched.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: 'Error processing password reset' } });
+  }
+});
+
+// POST /auth/reset-password
+router.post('/auth/reset-password', [
+  body('token').notEmpty(),
+  body('newPassword').isLength({ min: 6 })
+], async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ success: false, error: { message: 'Token and new password are required' } });
+  }
+
+  try {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const userRes = await db.query(
+      `SELECT id FROM users WHERE reset_token_hash = $1 AND reset_token_expires_at > NOW()`,
+      [tokenHash]
+    );
+
+    if (!userRes.rowCount) {
+      return res.status(400).json({ success: false, error: { message: 'Invalid or expired password reset token' } });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    await db.query(
+      `UPDATE users SET password_hash = $1, reset_token_hash = NULL, reset_token_expires_at = NULL WHERE id = $2`,
+      [newHash, userRes.rows[0].id]
+    );
+
+    res.json({ success: true, message: 'Password updated successfully. You may now log in.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: 'Failed to reset password' } });
+  }
+});
 
 module.exports = router;

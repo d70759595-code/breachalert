@@ -3,45 +3,77 @@ const { Worker } = require('bullmq');
 const { scanEmail } = require('./src/scanner');
 const db = require('./src/services/db');
 const { sendBreachAlert } = require('./src/services/mailer');
+const { calculateDeterministicRisk, generateRiskExplanation } = require('./src/services/riskEngine');
 const startScheduler = require('./src/queue/scheduler');
 
-const connection = { url: process.env.REDIS_URL };
+const connection = { url: process.env.REDIS_URL || 'redis://localhost:6379' };
+
+async function scanWithRetry(email, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await scanEmail(email);
+    } catch (err) {
+      if (err.message === 'RATE_LIMITED' && attempt < maxRetries - 1) {
+        const delayMs = 2000 * (attempt + 1);
+        console.log(`[worker] Rate limited on ${email}, retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
 
 const worker = new Worker('email-scan', async job => {
   const { monitoredEmailId, email } = job.data;
   console.log(`[worker] Scanning ${email} (job ${job.id})...`);
 
-  const breaches = await scanEmail(email);
+  const breaches = await scanWithRetry(email);
   let newBreachCount = 0;
 
   for (const b of breaches) {
-    // Only insert if this breach hasn't already been recorded for this email — avoids duplicate alerts
-    const { rows } = await db.query(
-      `SELECT id FROM breach_events WHERE monitored_email_id=$1 AND breach_name=$2`,
-      [monitoredEmailId, b.Name]
-    );
-    if (rows.length) continue;
+    const breachName = b.breachName || b.Name;
+    const breachDate = b.breachDate || b.BreachDate;
+    const dataClasses = b.exposedData || b.DataClasses || [];
+    const domain = b.domain || '';
+    const description = b.description || '';
 
+    // Calculate AI risk analysis score & explanations
+    const { score, level } = calculateDeterministicRisk(dataClasses, breachDate);
+    const aiExplanation = generateRiskExplanation(breachName, dataClasses, score, level);
+
+    // Use ON CONFLICT DO NOTHING to prevent duplicates safely
     const inserted = await db.query(
-      `INSERT INTO breach_events (monitored_email_id, breach_name, breach_date, data_classes)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [monitoredEmailId, b.Name, b.BreachDate, b.DataClasses]
+      `INSERT INTO breach_events 
+        (monitored_email_id, breach_name, breach_date, data_classes, breach_domain, breach_description, risk_score, risk_level, ai_explanation)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (monitored_email_id, breach_name) DO NOTHING
+       RETURNING *`,
+      [monitoredEmailId, breachName, breachDate, dataClasses, domain, description, score, level, JSON.stringify(aiExplanation)]
     );
 
-    await sendBreachAlert(email, inserted.rows[0]);
-    newBreachCount++;
+    if (inserted.rowCount > 0) {
+      await sendBreachAlert(email, inserted.rows[0]);
+      newBreachCount++;
+    }
   }
+
+  // Update last_scanned_at timestamp on monitored_emails table
+  await db.query(
+    'UPDATE monitored_emails SET last_scanned_at = NOW() WHERE id = $1',
+    [monitoredEmailId]
+  );
 
   console.log(`[worker] Done with ${email}: ${newBreachCount} new breach(es) found.`);
 }, {
   connection,
-  limiter: { max: 2, duration: 1000 } // respect XposedOrNot's 2 req/sec limit
+  concurrency: 2,
+  limiter: { max: 2, duration: 1000 }
 });
 
 worker.on('failed', (job, err) => {
-  console.error(`[worker] Job ${job.id} failed:`, err.message);
+  console.error(`[worker] Job ${job?.id} failed:`, err.message);
 });
 
 console.log('Worker started — waiting for scan jobs...');
-
 startScheduler();
