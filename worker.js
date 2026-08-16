@@ -3,6 +3,7 @@ const { Worker } = require('bullmq');
 const { scanEmail } = require('./src/scanner');
 const db = require('./src/services/db');
 const { sendBreachAlert } = require('./src/services/mailer');
+const { sendSMSNotification } = require('./src/services/smsService');
 const { calculateDeterministicRisk, generateRiskExplanation } = require('./src/services/riskEngine');
 const startScheduler = require('./src/queue/scheduler');
 
@@ -31,6 +32,16 @@ const worker = new Worker('email-scan', async job => {
   const breaches = await scanWithRetry(email);
   let newBreachCount = 0;
 
+  // Fetch owner user details to check plan and SMS options
+  const userRes = await db.query(
+    `SELECT u.plan, u.phone_number, u.sms_enabled 
+     FROM users u 
+     JOIN monitored_emails me ON me.user_id = u.id 
+     WHERE me.id = $1`,
+    [monitoredEmailId]
+  );
+  const owner = userRes.rows[0] || {};
+
   for (const b of breaches) {
     const breachName = b.breachName || b.Name;
     const breachDate = b.breachDate || b.BreachDate;
@@ -42,7 +53,7 @@ const worker = new Worker('email-scan', async job => {
     const { score, level } = calculateDeterministicRisk(dataClasses, breachDate);
     const aiExplanation = generateRiskExplanation(breachName, dataClasses, score, level);
 
-    // Use ON CONFLICT DO NOTHING to prevent duplicates safely
+    // Use ON CONFLICT DO NOTHING to prevent duplicate alerts safely
     const inserted = await db.query(
       `INSERT INTO breach_events 
         (monitored_email_id, breach_name, breach_date, data_classes, breach_domain, breach_description, risk_score, risk_level, ai_explanation)
@@ -53,7 +64,17 @@ const worker = new Worker('email-scan', async job => {
     );
 
     if (inserted.rowCount > 0) {
+      // 1. Email Alert
       await sendBreachAlert(email, inserted.rows[0]);
+
+      // 2. Family Plan SMS Alert Trigger (if enabled)
+      if (owner.plan === 'family' && owner.phone_number && owner.sms_enabled) {
+        await sendSMSNotification(
+          owner.phone_number,
+          `SECURITY BREACH ALERT: ${email} was detected in ${breachName}. Risk: ${level} (${score}/100). Take immediate action.`
+        );
+      }
+
       newBreachCount++;
     }
   }

@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('./server');
 const db = require('./src/services/db');
+const { sendSMSNotification } = require('./src/services/smsService');
 
 describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () => {
   
@@ -99,7 +100,38 @@ describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () 
     });
   });
 
-  describe('4. AI & Deterministic Risk Analysis Engine', () => {
+  describe('4. Stripe Billing & Subscription Hooks', () => {
+    it('POST /billing/create-checkout-session without auth should return 401', async () => {
+      const res = await request(app).post('/billing/create-checkout-session');
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('POST /billing/cancel-subscription without auth should return 401', async () => {
+      const res = await request(app).post('/billing/cancel-subscription');
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('POST /billing/webhook should handle mock webhook events safely', async () => {
+      const res = await request(app)
+        .post('/billing/webhook')
+        .send({
+          type: 'checkout.session.completed',
+          data: { object: { metadata: { userId: '1' }, subscription: 'sub_mock_123' } }
+        });
+      
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ received: true });
+    });
+  });
+
+  describe('5. SMS Notification Engine', () => {
+    it('sendSMSNotification should successfully format and return dispatch payload', async () => {
+      const res = await sendSMSNotification('+15550199283', 'BREACH ALERT: Test alert');
+      expect(res.success).toBe(true);
+    });
+  });
+
+  describe('6. AI & Deterministic Risk Analysis Engine', () => {
     const { calculateDeterministicRisk, generateRiskExplanation } = require('./src/services/riskEngine');
 
     it('Should calculate LOW risk for basic email metadata exposure', () => {
@@ -123,7 +155,7 @@ describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () 
     });
   });
 
-  describe('5. Multi-Submission & Rapid Click Defense', () => {
+  describe('7. Multi-Submission & Rapid Click Defense', () => {
     it('Multiple rapid requests to /auth/forgot-password should all be safely handled', async () => {
       const requests = Array(3).fill(0).map(() => 
         request(app).post('/auth/forgot-password').send({ email: "operator@breachalert.net" })

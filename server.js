@@ -10,6 +10,7 @@ const passport = require('./src/config/passportGoogle');
 const emailsRouter = require('./src/routes/emails');
 const authRouter = require('./src/routes/auth');
 const dashboardRouter = require('./src/routes/dashboard');
+const billingRouter = require('./src/routes/billing');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Mount billing router (handles raw body parsing internally for Stripe Webhooks)
+app.use('/', billingRouter);
 
 app.use(express.json({ limit: '100kb' }));
 app.use(passport.initialize());

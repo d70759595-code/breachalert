@@ -3,10 +3,14 @@
 -- 1. Ensure extensions if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Update users table with password reset fields
+-- 2. Update users table with password reset, phone, & Stripe fields
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sms_enabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
 
 -- 3. Update monitored_emails table
 ALTER TABLE monitored_emails ADD COLUMN IF NOT EXISTS last_scanned_at TIMESTAMPTZ;

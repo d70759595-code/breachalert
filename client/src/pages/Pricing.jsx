@@ -1,14 +1,40 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Navbar, Footer } from '../components/HeaderFooter';
+import { fetchWithAuth } from '../api';
 
-function Pricing() {
+function Pricing({ user }) {
+  const navigate = useNavigate();
   const [annual, setAnnual] = useState(true);
-  const [showComingSoon, setShowComingSoon] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [statusMsg, setStatusMsg] = useState('');
+
+  async function handleUpgrade() {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setLoading(true);
+    setStatusMsg('');
+    try {
+      const res = await fetchWithAuth('/billing/create-checkout-session', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || 'Checkout failed');
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setStatusMsg('Subscription upgrade initialized successfully.');
+      }
+    } catch (err) {
+      setStatusMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#070707] text-[#F5F5F5] selection:bg-[#FF6A2A] selection:text-black bg-noise flex flex-col">
-      <Navbar />
+      <Navbar user={user} />
 
       <main className="flex-1 pt-32 sm:pt-36 pb-20 px-4 sm:px-6 max-w-5xl mx-auto text-center w-full">
         
@@ -17,7 +43,7 @@ function Pricing() {
           Secure Your Digital Identity
         </h1>
         <p className="text-[#969696] text-sm sm:text-base max-w-xl mx-auto mb-10 leading-relaxed">
-          Choose the level of vigilance you need. Upgrade to the Family Plan for automated, real-time scanning and immediate breach alerts.
+          Choose the level of vigilance you need. Upgrade to the Family Plan for automated daily scanning, SMS alerts, and up to 5 monitored targets.
         </p>
 
         {/* Toggle */}
@@ -65,7 +91,7 @@ function Pricing() {
             </div>
             
             <button className="w-full py-3 rounded-full bg-white/[0.04] border border-white/[0.1] text-[#969696] font-mono text-xs uppercase tracking-wider cursor-default">
-              Current Active Plan
+              {user?.plan === 'family' ? 'Free Tier Available' : 'Current Active Plan'}
             </button>
           </div>
 
@@ -91,8 +117,8 @@ function Pricing() {
                   <span>Automated Daily Dark Web Scans</span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[#FF6A2A] text-lg">mail</span>
-                  <span>Instant Email & Zero-Day Alerts</span>
+                  <span className="material-symbols-outlined text-[#FF6A2A] text-lg">sms</span>
+                  <span>SMS Breach Emergency Alerts</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-[#FF6A2A] text-lg">travel_explore</span>
@@ -107,15 +133,16 @@ function Pricing() {
 
             <div>
               <button
-                onClick={() => setShowComingSoon(true)}
+                onClick={handleUpgrade}
+                disabled={loading}
                 className="w-full py-3.5 rounded-full bg-[#FF6A2A] hover:bg-[#FF7A3D] text-black font-bold font-mono text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,106,42,0.5)] flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-sm">lock</span>
-                <span>Upgrade Protection</span>
+                <span>{loading ? 'Processing Checkout...' : user?.plan === 'family' ? 'Family Plan Active' : 'Upgrade Protection'}</span>
               </button>
-              {showComingSoon && (
+              {statusMsg && (
                 <p className="font-mono text-[11px] text-[#FF6A2A] text-center mt-3 bg-[#FF6A2A]/10 p-2 rounded-xl border border-[#FF6A2A]/20">
-                  Payments coming soon — check back shortly!
+                  {statusMsg}
                 </p>
               )}
             </div>
@@ -128,7 +155,7 @@ function Pricing() {
             <span className="material-symbols-outlined text-sm text-[#FF6A2A]">shield</span> 256-bit Encryption
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-sm text-[#FF6A2A]">verified_user</span> Secure Checkout
+            <span className="material-symbols-outlined text-sm text-[#FF6A2A]">verified_user</span> Secure Stripe Checkout
           </span>
         </div>
 
