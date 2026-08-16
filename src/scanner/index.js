@@ -1,20 +1,30 @@
-require('dotenv').config();
-const XposedOrNotClient = require('./hibpClient');
-const redis = require('../services/redisClient');
+const { XposedOrNotProvider } = require('./provider');
+const redisClient = require('../services/redisClient');
 
-const xon = new XposedOrNotClient();
-const CACHE_TTL_SECONDS = 24 * 60 * 60; // 24h, per project spec
+const provider = new XposedOrNotProvider();
+const CACHE_TTL_SECONDS = 86400; // 24h cache
 
 async function scanEmail(email) {
-  const cacheKey = `breach:${email.toLowerCase()}`;
+  const cacheKey = `scan:${email.toLowerCase()}`;
 
-  const cached = await redis.get(cacheKey);
-  if (cached) return JSON.parse(cached);
+  try {
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (err) {
+    console.warn('[scanner] Redis cache read failed, proceeding with direct provider query:', err.message);
+  }
 
-  const breaches = await xon.checkEmail(email);
+  const breaches = await provider.checkEmail(email);
 
-  await redis.set(cacheKey, JSON.stringify(breaches), { EX: CACHE_TTL_SECONDS });
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(breaches), 'EX', CACHE_TTL_SECONDS);
+  } catch (err) {
+    console.warn('[scanner] Redis cache write failed:', err.message);
+  }
+
   return breaches;
 }
 
-module.exports = { scanEmail };
+module.exports = { scanEmail, provider };

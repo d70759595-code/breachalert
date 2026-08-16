@@ -1,19 +1,17 @@
-// Maps HIBP-style data classes to a Material Symbol icon + severity color.
 const DATA_CLASS_META = {
-  'Passwords': { icon: 'password', severity: 'error' },
-  'Credit cards': { icon: 'credit_card', severity: 'error' },
-  'Phone numbers': { icon: 'call', severity: 'tertiary' },
-  'Email addresses': { icon: 'mail', severity: 'tertiary' },
-  'Dates of birth': { icon: 'cake', severity: 'tertiary' }
+  'Passwords': { icon: 'key', severity: 'danger' },
+  'Credit cards': { icon: 'credit_card', severity: 'danger' },
+  'Phone numbers': { icon: 'call', severity: 'warning' },
+  'Email addresses': { icon: 'mail', severity: 'warning' },
+  'Dates of birth': { icon: 'cake', severity: 'warning' }
 };
 
 function metaFor(dataClasses = []) {
-  // Escalate to the most severe icon among the leaked data types.
-  const hasCritical = dataClasses.some(dc => DATA_CLASS_META[dc]?.severity === 'error');
+  const hasCritical = dataClasses.some(dc => DATA_CLASS_META[dc]?.severity === 'danger');
   const primaryClass = dataClasses[0];
-  const fallback = { icon: 'warning', severity: hasCritical ? 'error' : 'tertiary' };
+  const fallback = { icon: 'warning', severity: hasCritical ? 'danger' : 'warning' };
   const meta = DATA_CLASS_META[primaryClass] || fallback;
-  return { ...meta, severity: hasCritical ? 'error' : meta.severity };
+  return { ...meta, severity: hasCritical ? 'danger' : meta.severity };
 }
 
 function timeAgo(dateStr) {
@@ -27,50 +25,54 @@ function timeAgo(dateStr) {
 
 function BreachTimeline({ events }) {
   return (
-    <section className="glass-panel rounded-2xl p-6 flex flex-col border border-white/5 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-error via-tertiary to-transparent"></div>
+    <section className="bg-[#121212] rounded-3xl p-6 border border-white/[0.08] flex flex-col relative overflow-hidden backdrop-blur-xl">
+      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-red-500 via-[#FF6A2A] to-transparent" />
 
       <div className="flex justify-between items-center mb-6">
-        <h3 className="font-mono text-xs text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
-          <span className="material-symbols-outlined text-error text-sm">warning</span> Priority Alerts
+        <h3 className="font-mono text-xs text-red-400 uppercase tracking-widest flex items-center gap-2 font-semibold">
+          <span className="material-symbols-outlined text-red-400 text-sm">warning</span> Priority Security Incidents
         </h3>
         {events.length > 0 && (
-          <span className="bg-error/10 text-error px-2 py-0.5 rounded text-xs font-mono">{events.length} New</span>
+          <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold">
+            {events.length} Incident{events.length !== 1 ? 's' : ''}
+          </span>
         )}
       </div>
 
       {events.length === 0 ? (
-        <p className="font-body text-sm text-on-surface-variant/70 text-center py-6">
-          No breaches found (yet) — good news!
-        </p>
+        <div className="py-8 text-center bg-[#0D0D0D] border border-dashed border-white/[0.08] rounded-2xl">
+          <span className="material-symbols-outlined text-emerald-400 text-3xl mb-1">verified_user</span>
+          <p className="text-xs text-neutral-300 font-medium">No Breaches Detected</p>
+          <p className="text-[11px] text-[#626262] mt-0.5">Your identities are currently clean across scanned breach databases.</p>
+        </div>
       ) : (
         <div className="space-y-3 flex-1">
           {events.map(ev => {
             const { icon, severity } = metaFor(ev.data_classes);
-            const colorClasses = severity === 'error'
-              ? 'bg-error/10 text-error border-error/20'
-              : 'bg-tertiary/10 text-tertiary border-tertiary/20';
-            const titleColor = severity === 'error' ? 'text-error' : 'text-tertiary';
+            const isDanger = severity === 'danger';
+            const badgeBg = isDanger ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
 
             return (
               <div
                 key={ev.id}
-                className="bg-surface-container/30 border border-white/5 p-4 rounded-xl flex gap-4 items-start hover:bg-surface-container/50 transition-colors"
+                className="bg-[#161616] border border-white/[0.06] hover:border-[#FF6A2A]/30 p-4 rounded-2xl flex gap-3.5 items-start transition-all"
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${colorClasses}`}>
-                  <span className="material-symbols-outlined text-lg">{icon}</span>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${badgeBg}`}>
+                  <span className="material-symbols-outlined text-base">{icon}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1 gap-2">
-                    <h4 className={`font-body text-sm font-semibold ${titleColor} truncate`}>{ev.breach_name}</h4>
-                    <span className="font-mono text-[10px] text-outline-variant shrink-0">{timeAgo(ev.discovered_at)}</span>
+                    <h4 className={`text-xs font-bold font-display ${isDanger ? 'text-red-400' : 'text-amber-400'} truncate`}>
+                      {ev.breach_name}
+                    </h4>
+                    <span className="font-mono text-[10px] text-[#626262] shrink-0">{timeAgo(ev.discovered_at)}</span>
                   </div>
-                  <p className="font-body text-sm text-on-surface-variant/80 mb-2">
-                    Breached {new Date(ev.breach_date).toLocaleDateString()}
+                  <p className="text-xs text-[#969696] mb-2">
+                    Breached on {new Date(ev.breach_date).toLocaleDateString()}
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {(ev.data_classes || []).map(dc => (
-                      <span key={dc} className="font-mono text-[10px] uppercase tracking-wide bg-surface-container-high/50 text-on-surface-variant px-2 py-0.5 rounded border border-white/5">
+                      <span key={dc} className="font-mono text-[10px] uppercase tracking-wide bg-black/40 text-neutral-300 px-2 py-0.5 rounded-full border border-white/[0.06]">
                         {dc}
                       </span>
                     ))}
