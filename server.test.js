@@ -2,10 +2,9 @@ const request = require('supertest');
 const app = require('./server');
 const db = require('./src/services/db');
 
-describe('BreachAlert Comprehensive Security & Regression Test Suite', () => {
+describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () => {
   
   afterAll(async () => {
-    // Close open handles after testing
     if (db && db.end) {
       await db.end().catch(() => {});
     }
@@ -20,7 +19,7 @@ describe('BreachAlert Comprehensive Security & Regression Test Suite', () => {
     });
   });
 
-  describe('2. Authentication & Input Validation Security', () => {
+  describe('2. Authentication & Form Interaction Security', () => {
     it('POST /auth/login with empty body should return 400 with generic error', async () => {
       const res = await request(app)
         .post('/auth/login')
@@ -65,6 +64,13 @@ describe('BreachAlert Comprehensive Security & Regression Test Suite', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
     });
+
+    it('POST /auth/logout should clear authentication cookie', async () => {
+      const res = await request(app).post('/auth/logout');
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.headers['set-cookie']).toBeDefined();
+    });
   });
 
   describe('3. Authorization & IDOR Protection', () => {
@@ -84,6 +90,12 @@ describe('BreachAlert Comprehensive Security & Regression Test Suite', () => {
       const res = await request(app).post('/emails/9999/scan-now');
       expect(res.statusCode).toBe(401);
       expect(res.body.success).toBe(false);
+    });
+
+    it('GET /emails/verify/invalidtoken123 should reject invalid verification tokens', async () => {
+      const res = await request(app).get('/emails/verify/invalidtoken123');
+      expect(res.statusCode).toBe(400);
+      expect(res.text).toContain('Invalid or expired verification token');
     });
   });
 
@@ -108,6 +120,19 @@ describe('BreachAlert Comprehensive Security & Regression Test Suite', () => {
       expect(explanation).toHaveProperty('reasons');
       expect(explanation).toHaveProperty('recommendations');
       expect(explanation.recommendations.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('5. Multi-Submission & Rapid Click Defense', () => {
+    it('Multiple rapid requests to /auth/forgot-password should all be safely handled', async () => {
+      const requests = Array(3).fill(0).map(() => 
+        request(app).post('/auth/forgot-password').send({ email: "operator@breachalert.net" })
+      );
+      const responses = await Promise.all(requests);
+      responses.forEach(res => {
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+      });
     });
   });
 
