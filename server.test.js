@@ -1,7 +1,7 @@
 const request = require('supertest');
 const app = require('./server');
 const db = require('./src/services/db');
-const { sendSMSNotification } = require('./src/services/smsService');
+const { sendSMSNotification, validateE164Phone } = require('./src/services/smsService');
 
 describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () => {
   
@@ -74,7 +74,70 @@ describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () 
     });
   });
 
-  describe('3. Authorization & IDOR Protection', () => {
+  describe('3. Phone Verification & Phone Number Validation', () => {
+    it('validateE164Phone should correctly identify E.164 phone formats', () => {
+      expect(validateE164Phone('+15550199283')).toBe(true);
+      expect(validateE164Phone('+919876543210')).toBe(true);
+      expect(validateE164Phone('12345')).toBe(false);
+      expect(validateE164Phone('not-a-phone')).toBe(false);
+      expect(validateE164Phone('')).toBe(false);
+    });
+
+    it('POST /auth/phone/send-otp without authentication should return 401', async () => {
+      const res = await request(app)
+        .post('/auth/phone/send-otp')
+        .send({ phoneNumber: '+15550199283' });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('POST /auth/phone/verify-otp without authentication should return 401', async () => {
+      const res = await request(app)
+        .post('/auth/phone/verify-otp')
+        .send({ otpCode: '123456' });
+      expect(res.statusCode).toBe(401);
+    });
+  });
+
+  describe('4. Twilio SMS Provider & Fail-Loudly Configuration Engine', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    afterAll(() => {
+      process.env = originalEnv;
+    });
+
+    it('sendSMSNotification should return disabled message when TWILIO_ENABLED is false', async () => {
+      process.env.TWILIO_ENABLED = 'false';
+      const res = await sendSMSNotification('+15550199283', 'Test alert');
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('disabled');
+    });
+
+    it('sendSMSNotification should FAIL LOUDLY when TWILIO_ENABLED is true but credentials missing', async () => {
+      process.env.TWILIO_ENABLED = 'true';
+      delete process.env.TWILIO_ACCOUNT_SID;
+      delete process.env.TWILIO_AUTH_TOKEN;
+
+      const res = await sendSMSNotification('+15550199283', 'Test alert');
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('Twilio Configuration Error');
+    });
+
+    it('sendSMSNotification should reject non-E.164 phone numbers before making API call', async () => {
+      process.env.TWILIO_ENABLED = 'true';
+      process.env.TWILIO_ACCOUNT_SID = 'ACmock123';
+      process.env.TWILIO_AUTH_TOKEN = 'tokenmock123';
+
+      const res = await sendSMSNotification('invalid-phone', 'Test alert');
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('Invalid phone number format');
+    });
+  });
+
+  describe('5. Authorization & IDOR Protection', () => {
     it('GET /dashboard without HttpOnly cookie should return 401 Unauthorized', async () => {
       const res = await request(app).get('/dashboard');
       expect(res.statusCode).toBe(401);
@@ -100,7 +163,7 @@ describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () 
     });
   });
 
-  describe('4. Stripe Billing & Subscription Hooks', () => {
+  describe('6. Stripe Billing & Subscription Hooks', () => {
     it('POST /billing/create-checkout-session without auth should return 401', async () => {
       const res = await request(app).post('/billing/create-checkout-session');
       expect(res.statusCode).toBe(401);
@@ -124,14 +187,7 @@ describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () 
     });
   });
 
-  describe('5. SMS Notification Engine', () => {
-    it('sendSMSNotification should successfully format and return dispatch payload', async () => {
-      const res = await sendSMSNotification('+15550199283', 'BREACH ALERT: Test alert');
-      expect(res.success).toBe(true);
-    });
-  });
-
-  describe('6. AI & Deterministic Risk Analysis Engine', () => {
+  describe('7. AI & Deterministic Risk Analysis Engine', () => {
     const { calculateDeterministicRisk, generateRiskExplanation } = require('./src/services/riskEngine');
 
     it('Should calculate LOW risk for basic email metadata exposure', () => {
@@ -155,7 +211,7 @@ describe('BreachAlert Comprehensive Security & Interactive API Audit Suite', () 
     });
   });
 
-  describe('7. Multi-Submission & Rapid Click Defense', () => {
+  describe('8. Multi-Submission & Rapid Click Defense', () => {
     it('Multiple rapid requests to /auth/forgot-password should all be safely handled', async () => {
       const requests = Array(3).fill(0).map(() => 
         request(app).post('/auth/forgot-password').send({ email: "operator@breachalert.net" })

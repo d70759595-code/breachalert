@@ -34,7 +34,7 @@ const worker = new Worker('email-scan', async job => {
 
   // Fetch owner user details to check plan and SMS options
   const userRes = await db.query(
-    `SELECT u.plan, u.phone_number, u.sms_enabled 
+    `SELECT u.plan, u.phone_number, u.phone_verified, u.sms_enabled 
      FROM users u 
      JOIN monitored_emails me ON me.user_id = u.id 
      WHERE me.id = $1`,
@@ -67,12 +67,10 @@ const worker = new Worker('email-scan', async job => {
       // 1. Email Alert
       await sendBreachAlert(email, inserted.rows[0]);
 
-      // 2. Family Plan SMS Alert Trigger (if enabled)
-      if (owner.plan === 'family' && owner.phone_number && owner.sms_enabled) {
-        await sendSMSNotification(
-          owner.phone_number,
-          `SECURITY BREACH ALERT: ${email} was detected in ${breachName}. Risk: ${level} (${score}/100). Take immediate action.`
-        );
+      // 2. Family Plan SMS Alert Trigger (Strictly for Family Plan + Verified Phone + SMS Enabled)
+      if (owner.plan === 'family' && owner.phone_number && owner.phone_verified && owner.sms_enabled) {
+        const smsContent = `BreachAlert Alert: New breach (${breachName}) detected for ${email}. Risk: ${level} (${score}/100). Sign in to review action items.`;
+        await sendSMSNotification(owner.phone_number, smsContent);
       }
 
       newBreachCount++;

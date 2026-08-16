@@ -7,6 +7,7 @@ const passport = require('../config/passportGoogle');
 const db = require('../services/db');
 const requireAuth = require('../middleware/auth');
 const { sendVerificationEmail } = require('../services/mailer');
+const { sendSMSNotification, validateE164Phone } = require('../services/smsService');
 
 const SALT_ROUNDS = 10;
 const TOKEN_EXPIRY = '7d';
@@ -35,7 +36,7 @@ function sendAuthResponse(res, user, statusCode = 200) {
 // GET /auth/me — Check auth state using HttpOnly cookie
 router.get('/auth/me', requireAuth, async (req, res) => {
   try {
-    const result = await db.query('SELECT id, email, plan, created_at FROM users WHERE id = $1', [req.user.id]);
+    const result = await db.query('SELECT id, email, plan, phone_number, phone_verified, sms_enabled, created_at FROM users WHERE id = $1', [req.user.id]);
     if (!result.rowCount) {
       return res.status(404).json({ success: false, error: { message: 'User not found' } });
     }
@@ -132,7 +133,6 @@ router.get('/auth/google/callback',
       { expiresIn: TOKEN_EXPIRY }
     );
 
-    // Set HttpOnly cookie securely without exposing token in URL query string
     res.cookie('token', token, COOKIE_OPTIONS);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard`);
   }
@@ -160,7 +160,6 @@ router.post('/auth/forgot-password', [
       console.log(`Reset URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}\n`);
     }
 
-    // Always respond with success to prevent account enumeration
     res.json({ success: true, message: 'If an account exists with that email, a password reset link has been dispatched.' });
   } catch (err) {
     res.status(500).json({ success: false, error: { message: 'Error processing password reset' } });
@@ -200,6 +199,71 @@ router.post('/auth/reset-password', [
     res.json({ success: true, message: 'Password updated successfully. You may now log in.' });
   } catch (err) {
     res.status(500).json({ success: false, error: { message: 'Failed to reset password' } });
+  }
+});
+
+// POST /auth/phone/send-otp — Sends 6-digit phone verification OTP code
+router.post('/auth/phone/send-otp', requireAuth, [
+  body('phoneNumber').notEmpty().withMessage('Phone number required')
+], async (req, res) => {
+  const { phoneNumber } = req.body;
+
+  if (!validateE164Phone(phoneNumber)) {
+    return res.status(400).json({
+      success: false,
+      error: { message: 'Invalid phone format. Phone number must follow E.164 standard (e.g. +15550199283).' }
+    });
+  }
+
+  try {
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+
+    await db.query(
+      `UPDATE users 
+       SET phone_number = $1, phone_verified = false, phone_verify_token = $2, phone_verify_token_expires_at = NOW() + INTERVAL '10 minutes'
+       WHERE id = $3`,
+      [phoneNumber.trim(), otpHash, req.user.id]
+    );
+
+    const smsRes = await sendSMSNotification(phoneNumber.trim(), `BreachAlert Verification Code: ${otpCode}. Expires in 10 minutes.`);
+
+    res.json({
+      success: true,
+      message: 'Verification OTP sent to mobile number.',
+      smsStatus: smsRes
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: 'Failed to send phone verification OTP' } });
+  }
+});
+
+// POST /auth/phone/verify-otp — Verifies 6-digit OTP code & activates SMS alert eligibility
+router.post('/auth/phone/verify-otp', requireAuth, [
+  body('otpCode').isLength({ min: 6, max: 6 }).withMessage('6-digit OTP code required')
+], async (req, res) => {
+  const { otpCode } = req.body;
+  const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+
+  try {
+    const result = await db.query(
+      `UPDATE users 
+       SET phone_verified = true, sms_enabled = true, phone_verify_token = NULL, phone_verify_token_expires_at = NULL
+       WHERE id = $1 AND phone_verify_token = $2 AND phone_verify_token_expires_at > NOW()
+       RETURNING id, phone_number`,
+      [req.user.id, otpHash]
+    );
+
+    if (!result.rowCount) {
+      return res.status(400).json({ success: false, error: { message: 'Invalid or expired OTP code' } });
+    }
+
+    res.json({
+      success: true,
+      message: 'Mobile phone number verified successfully! SMS alert eligibility activated.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: 'Failed to verify phone OTP' } });
   }
 });
 
