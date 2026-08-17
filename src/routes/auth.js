@@ -6,7 +6,7 @@ const { body, validationResult } = require('express-validator');
 const passport = require('../config/passportGoogle');
 const db = require('../services/db');
 const requireAuth = require('../middleware/auth');
-const { sendVerificationEmail } = require('../services/mailer');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/mailer');
 const { sendSMSNotification, validateE164Phone } = require('../services/smsService');
 
 const SALT_ROUNDS = 10;
@@ -156,8 +156,7 @@ router.post('/auth/forgot-password', [
         [resetTokenHash, userRes.rows[0].id]
       );
 
-      console.log(`\n[STUB EMAIL] Password reset token for ${email}: ${resetToken}`);
-      console.log(`Reset URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}\n`);
+      await sendPasswordResetEmail(email, resetToken);
     }
 
     res.json({ success: true, message: 'If an account exists with that email, a password reset link has been dispatched.' });

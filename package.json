@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/d70759595-code/breachalert#readme",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "axios": "^1.19.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.0.11",

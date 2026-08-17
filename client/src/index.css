@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
 
 @tailwind base;
@@ -28,13 +28,13 @@
 body {
   background-color: #070707;
   color: #F5F5F5;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   margin: 0;
   padding: 0;
 }
 
-/* Global Noise Background */
+/* Subtle Global Noise Overlay */
 .bg-noise {
   background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 32px 32px;
@@ -43,21 +43,25 @@ body {
 /* Glassmorphism Panel */
 .glass-panel {
   background-color: rgba(18, 18, 18, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .glow-orange {
-  box-shadow: 0 0 30px rgba(255, 106, 42, 0.4);
+  box-shadow: 0 0 35px rgba(255, 106, 42, 0.45);
 }
 
-/* Cyber Horizon Arc */
-.horizon-arc-container {
+.glow-orange-lg {
+  box-shadow: 0 0 60px rgba(255, 106, 42, 0.6);
+}
+
+/* Signature Huge Curved Orange Horizon Effect */
+.horizon-arc-wrapper {
   position: relative;
   width: 100%;
-  max-width: 1100px;
-  height: 180px;
+  max-width: 1400px;
+  height: 200px;
   margin: 0 auto;
   overflow: visible;
   display: flex;
@@ -65,50 +69,48 @@ body {
   align-items: center;
 }
 
+.horizon-arc-glow {
+  position: absolute;
+  top: -50px;
+  width: 100%;
+  height: 240px;
+  background: radial-gradient(ellipse at top center, rgba(255, 106, 42, 0.55) 0%, rgba(255, 117, 64, 0.25) 45%, transparent 75%);
+  filter: blur(40px);
+  pointer-events: none;
+  animation: arcBreath 7s ease-in-out infinite;
+}
+
 .horizon-arc-line {
   position: absolute;
-  width: 100%;
-  height: 220px;
+  width: 130%;
+  height: 300px;
+  left: -15%;
   border-radius: 50% / 100% 100% 0 0;
-  border-top: 2px solid rgba(255, 106, 42, 0.85);
+  border-top: 2px solid rgba(255, 106, 42, 0.9);
   box-shadow: 
-    0 -4px 30px rgba(255, 106, 42, 0.8),
-    0 -12px 60px rgba(255, 90, 30, 0.5),
-    0 -25px 90px rgba(255, 90, 30, 0.3);
-  background: radial-gradient(ellipse at top center, rgba(255, 106, 42, 0.15) 0%, rgba(7, 7, 7, 0.95) 70%);
+    0 -4px 35px rgba(255, 106, 42, 0.85),
+    0 -14px 70px rgba(255, 117, 64, 0.5),
+    0 -30px 100px rgba(255, 106, 42, 0.35);
+  background: radial-gradient(ellipse at top center, rgba(255, 106, 42, 0.18) 0%, rgba(7, 7, 7, 0.98) 65%);
 }
 
-.horizon-arc-glow-bg {
-  position: absolute;
-  top: -40px;
-  width: 90%;
-  height: 160px;
-  background: radial-gradient(ellipse at top center, rgba(255, 90, 30, 0.5) 0%, rgba(255, 60, 0, 0.2) 40%, transparent 75%);
-  filter: blur(35px);
-  pointer-events: none;
-  animation: pulseGlow 6s ease-in-out infinite;
+@keyframes arcBreath {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.02); }
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 0.95; transform: scale(1.03); }
-}
-
-/* Custom Scrollbars */
+/* Scrollbar styles */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: #070707;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #222;
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #333;
 }
