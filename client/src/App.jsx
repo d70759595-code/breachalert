@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { fetchWithAuth } from './api';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Pricing from './pages/Pricing';
@@ -7,51 +8,53 @@ import Support from './pages/Support';
 import Settings from './pages/Settings';
 import Dashboard from './pages/Dashboard';
 
-const TOKEN_KEY = 'breachalert_token';
-
-function getInitialToken() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('token') || localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || null;
-}
-
 function App() {
-  const [token, setToken] = useState(getInitialToken);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Clean the ?token=... out of the visible URL once we've captured it into state.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-    if (urlToken) {
-      localStorage.setItem(TOKEN_KEY, urlToken);
-      window.history.replaceState({}, '', window.location.pathname);
+    async function checkAuth() {
+      try {
+        const res = await fetchWithAuth('/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        }
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     }
+    checkAuth();
+
+    const handleUnauthorized = () => setUser(null);
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
 
-  function handleLogin(newToken, remember = false) {
-    if (remember) {
-      localStorage.setItem(TOKEN_KEY, newToken);
-      sessionStorage.removeItem(TOKEN_KEY);
-    } else {
-      sessionStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.removeItem(TOKEN_KEY);
+  async function handleLogout() {
+    try {
+      await fetchWithAuth('/auth/logout', { method: 'POST' });
+    } catch {
+      setUser(null);
+    } finally {
+      setUser(null);
     }
-    setToken(newToken);
   }
 
-  function handleLogout() {
-    localStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(TOKEN_KEY);
-    setToken(null);
+  if (loading) {
+    return <div className="min-h-screen bg-[#070707] flex items-center justify-center"></div>;
   }
 
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login onLogin={handleLogin} />} />
+      <Route path="/login" element={<Login onLogin={(u) => setUser(u)} />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/support" element={<Support />} />
-      <Route path="/dashboard" element={<Dashboard token={token} onLogout={handleLogout} />} />
-      <Route path="/settings" element={<Settings token={token} onLogout={handleLogout} />} />
+      <Route path="/dashboard" element={<Dashboard user={user} onLogout={handleLogout} />} />
+      <Route path="/settings" element={<Settings user={user} onLogout={handleLogout} />} />
     </Routes>
   );
 }

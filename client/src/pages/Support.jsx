@@ -4,6 +4,26 @@ import { Navbar, Footer } from '../components/HeaderFooter';
 function Support({ user }) {
   const [search, setSearch] = useState('');
 
+  const faqs = [
+    {
+      icon: 'radar',
+      title: 'How often are breach scans executed?',
+      desc: 'Manual scans can be triggered on demand. Family plan identities are automatically scanned every 24 hours via background BullMQ workers.'
+    },
+    {
+      icon: 'shield',
+      title: 'What should I do if a breach is detected?',
+      desc: 'Immediately rotate compromised passwords on affected services, activate Multi-Factor Authentication (MFA), and audit credential reuse.'
+    },
+    {
+      icon: 'vpn_key',
+      title: 'How do you store my data?',
+      desc: 'We store zero plaintext passwords. All sensitive session data is encrypted and managed via secure HttpOnly cookies.'
+    }
+  ];
+
+  const filteredFaqs = faqs.filter(f => f.title.toLowerCase().includes(search.toLowerCase()) || f.desc.toLowerCase().includes(search.toLowerCase()));
+
   return (
     <div className="min-h-screen bg-[#070707] text-[#F5F5F5] selection:bg-[#FF6A2A] selection:text-black bg-noise flex flex-col justify-between">
       <Navbar user={user} />
@@ -30,25 +50,17 @@ function Support({ user }) {
 
         {/* FAQ Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mb-12">
-          <div className="p-6 rounded-3xl bg-[#121212] border border-white/[0.08] backdrop-blur-xl">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6A2A]/10 border border-[#FF6A2A]/20 flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-[#FF6A2A]">radar</span>
+          {filteredFaqs.length > 0 ? filteredFaqs.map((faq, i) => (
+            <div key={i} className="p-6 rounded-3xl bg-[#121212] border border-white/[0.08] backdrop-blur-xl">
+              <div className="w-10 h-10 rounded-2xl bg-[#FF6A2A]/10 border border-[#FF6A2A]/20 flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-[#FF6A2A]">{faq.icon}</span>
+              </div>
+              <h3 className="text-base font-semibold text-white mb-2 font-display">{faq.title}</h3>
+              <p className="text-xs text-[#969696] leading-relaxed">{faq.desc}</p>
             </div>
-            <h3 className="text-base font-semibold text-white mb-2 font-display">How often are breach scans executed?</h3>
-            <p className="text-xs text-[#969696] leading-relaxed">
-              Manual scans can be triggered on demand. Family plan identities are automatically scanned every 24 hours via background BullMQ workers.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-3xl bg-[#121212] border border-white/[0.08] backdrop-blur-xl">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6A2A]/10 border border-[#FF6A2A]/20 flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-[#FF6A2A]">shield</span>
-            </div>
-            <h3 className="text-base font-semibold text-white mb-2 font-display">What should I do if a breach is detected?</h3>
-            <p className="text-xs text-[#969696] leading-relaxed">
-              Immediately rotate compromised passwords on affected services, activate Multi-Factor Authentication (MFA), and audit credential reuse.
-            </p>
-          </div>
+          )) : (
+            <div className="col-span-full py-8 text-center text-[#969696] text-sm border border-dashed border-white/[0.08] rounded-2xl bg-[#0D0D0D]">No topics found matching your search.</div>
+          )}
         </div>
 
         {/* Contact Analyst Box */}

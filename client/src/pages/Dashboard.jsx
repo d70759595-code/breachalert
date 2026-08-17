@@ -25,7 +25,8 @@ function Dashboard({ token, onLogout }) {
       return;
     }
     loadDashboard();
-  }, [token]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleAddEmail(e) {
     e.preventDefault();

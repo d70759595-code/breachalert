@@ -28,6 +28,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Strict CSRF Protection Middleware
+app.use((req, res, next) => {
+  const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  if (isStateChanging) {
+    const origin = req.headers.origin;
+    if (origin && origin !== allowedOrigin) {
+      console.warn(`[CSRF Warning] Blocked state-changing request from unverified origin: ${origin}`);
+      return res.status(403).json({ success: false, error: { message: 'CSRF Attempt Blocked' } });
+    }
+  }
+  next();
+});
+
 // Mount billing router (handles raw body parsing internally for Stripe Webhooks)
 app.use('/', billingRouter);
 
@@ -47,10 +60,18 @@ const authLimiter = rateLimit({
   message: { success: false, error: { code: 'TOO_MANY_AUTH_ATTEMPTS', message: 'Too many authentication attempts, please try again in 15 minutes.' } }
 });
 
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, error: { message: 'Rate limit exceeded for sensitive endpoint.' } }
+});
+
 app.use('/auth/login', authLimiter);
 app.use('/auth/signup', authLimiter);
 app.use('/auth/forgot-password', authLimiter);
 app.use('/auth/reset-password', authLimiter);
+app.use('/emails', sensitiveLimiter);
+app.use('/billing/create-checkout-session', sensitiveLimiter);
 app.use(generalLimiter);
 
 // Health Check Endpoint (Verifies PostgreSQL & Redis connections)

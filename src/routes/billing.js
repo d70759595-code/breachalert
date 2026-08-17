@@ -68,17 +68,16 @@ router.post('/billing/cancel-subscription', requireAuth, async (req, res) => {
   }
 });
 
-// POST /billing/webhook — Processes Stripe Webhooks (checkout.session.completed, customer.subscription.deleted)
 router.post('/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
 
   try {
-    if (process.env.STRIPE_WEBHOOK_SECRET) {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } else {
-      event = JSON.parse(req.body.toString());
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('[webhook] STRIPE_WEBHOOK_SECRET is missing. Rejecting webhook.');
+      return res.status(400).send('Webhook Configuration Error');
     }
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('[webhook signature failed]', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);

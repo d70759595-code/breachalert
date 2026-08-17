@@ -1,18 +1,22 @@
 const router = require('express').Router();
 const crypto = require('crypto');
+const { body, validationResult } = require('express-validator');
 const db = require('../services/db');
 const requireAuth = require('../middleware/auth');
 const { sendVerificationEmail } = require('../services/mailer');
 const scanQueue = require('../queue/scanQueue');
 
 // POST /emails — logged-in user submits an email to monitor
-router.post('/emails', requireAuth, async (req, res) => {
+router.post('/emails', requireAuth, [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email address is required').isLength({ max: 255 })
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: errors.array()[0].msg });
+  }
+
   const { email } = req.body;
   const userId = req.user.id;
-
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'Valid email address is required' });
-  }
 
   const userResult = await db.query('SELECT plan FROM users WHERE id=$1', [userId]);
   if (!userResult.rows.length) {
@@ -41,11 +45,17 @@ router.post('/emails', requireAuth, async (req, res) => {
 
   const token = crypto.randomBytes(32).toString('hex');
 
-  await db.query(
+  const insertResult = await db.query(
     `INSERT INTO monitored_emails (user_id, email, verified, verify_token, created_at, verify_token_expires_at)
-     VALUES ($1, $2, false, $3, now(), now() + interval '24 hours')`,
-    [userId, email, token]
+     SELECT $1, $2, false, $3, now(), now() + interval '24 hours'
+     WHERE (SELECT COUNT(*) FROM monitored_emails WHERE user_id = $1) < $4
+     RETURNING id`,
+    [userId, email, token, limit]
   );
+
+  if (insertResult.rowCount === 0) {
+    return res.status(403).json({ error: `Plan limit strictly reached (${limit} email${limit > 1 ? 's' : ''})` });
+  }
 
   await sendVerificationEmail(email, token);
   res.json({ status: 'pending_verification', verifyToken: token });

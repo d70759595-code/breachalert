@@ -94,7 +94,7 @@ function Landing({ user, onLogout }) {
               className="bg-transparent border-none text-xs sm:text-sm text-white placeholder-[#606060] focus:outline-none flex-1 px-3"
             />
             <Link 
-              to="/login"
+              to={`/login?email=${encodeURIComponent(scanInput)}`}
               className="bg-[#FF6A2A] hover:bg-[#FF7540] text-black font-semibold text-xs px-4 py-2 rounded-full transition-all flex items-center gap-1"
             >
               <span>Scan Now</span>

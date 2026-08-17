@@ -1,112 +1,98 @@
-import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { Navbar, Footer } from '../components/HeaderFooter';
 
-function Pricing() {
+function Pricing({ user, onLogout }) {
   const [annual, setAnnual] = useState(true);
   const [showComingSoon, setShowComingSoon] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="flex items-center justify-between px-6 md:px-10 py-5 border-b border-white/5">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary">shield_person</span>
-          <span className="font-display font-bold text-on-surface">BreachAlert</span>
-        </Link>
-        <div className="hidden md:flex items-center gap-8 font-body text-sm text-on-surface-variant">
-          <Link to="/#features" className="hover:text-primary transition-colors">Features</Link>
-          <span className="text-primary">Pricing</span>
-          <a href="#" className="hover:text-primary transition-colors">Enterprise</a>
-          <Link to="/support" className="hover:text-primary transition-colors">Support</Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link to="/login" className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors">Login</Link>
-          <Link to="/login" className="bg-primary text-white font-mono text-xs uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-blue-600 transition-all glow-primary">
-            Get Started
-          </Link>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[#070707] text-[#F5F5F5] selection:bg-[#FF6A2A] selection:text-black bg-noise flex flex-col justify-between">
+      <Navbar user={user} onLogout={onLogout} />
 
-      <section className="px-6 py-16 max-w-5xl mx-auto text-center">
-        <h1 className="font-display text-3xl md:text-4xl font-bold text-on-surface mb-4">Secure Your Digital Identity</h1>
-        <p className="font-body text-on-surface-variant/80 max-w-xl mx-auto mb-8">
+      <section className="flex-1 pt-32 sm:pt-40 pb-24 px-4 sm:px-6 max-w-5xl mx-auto text-center w-full relative z-10">
+        <h1 className="text-3xl sm:text-5xl font-medium text-white tracking-tight font-display mb-4">
+          Secure Your Digital Identity
+        </h1>
+        <p className="text-[#9A9A9A] text-sm sm:text-base max-w-xl mx-auto mb-10 leading-relaxed">
           Choose the level of vigilance you need. Upgrade to the Family Plan for automated, real-time scanning and immediate alerts when a breach is detected.
         </p>
 
-        <div className="flex items-center justify-center gap-3 mb-12">
-          <span className={`font-body text-sm ${!annual ? 'text-on-surface' : 'text-on-surface-variant/60'}`}>Monthly</span>
+        {/* Toggle */}
+        <div className="flex items-center justify-center gap-4 mb-14">
+          <span className={`text-xs font-mono tracking-widest uppercase transition-colors ${!annual ? 'text-white font-semibold' : 'text-[#606060]'}`}>Monthly</span>
           <button
             onClick={() => setAnnual(!annual)}
-            className={`w-11 h-6 rounded-full transition-colors relative ${annual ? 'bg-primary' : 'bg-surface-container-high'}`}
+            className={`w-12 h-6 rounded-full transition-all relative ${annual ? 'bg-[#FF6A2A]' : 'bg-[#181818] border border-white/[0.1]'}`}
           >
-            <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${annual ? 'left-6' : 'left-1'}`}></span>
+            <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${annual ? 'left-[26px]' : 'left-1'}`}></span>
           </button>
-          <span className={`font-body text-sm ${annual ? 'text-on-surface' : 'text-on-surface-variant/60'}`}>Annually</span>
-          <span className="font-mono text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">Save 20%</span>
+          <span className={`text-xs font-mono tracking-widest uppercase transition-colors ${annual ? 'text-white font-semibold' : 'text-[#606060]'}`}>Annually</span>
+          <span className="font-mono text-[9px] uppercase tracking-widest text-[#FF6A2A] bg-[#FF6A2A]/10 px-2 py-0.5 rounded-full border border-[#FF6A2A]/20">Save 20%</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-          {/* Free */}
-          <div className="glass-panel rounded-2xl p-8 border border-white/5 flex flex-col">
-            <h3 className="font-display text-2xl font-bold text-on-surface mb-1">Free</h3>
-            <p className="font-body text-sm text-on-surface-variant/70 mb-6">Basic protection for individuals.</p>
-            <div className="mb-6">
-              <span className="font-display text-4xl font-bold text-on-surface">$0</span>
-              <span className="font-body text-sm text-on-surface-variant/60">/month</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left max-w-4xl mx-auto">
+          
+          {/* Free Tier */}
+          <div className="bg-[#121212] rounded-3xl p-8 border border-white/[0.08] backdrop-blur-xl flex flex-col">
+            <h3 className="text-xl font-medium text-white font-display mb-1">Free Tier</h3>
+            <p className="text-xs text-[#969696] mb-8">Basic manual protection for individuals.</p>
+            
+            <div className="mb-8">
+              <span className="text-5xl font-medium text-white font-display">$0</span>
+              <span className="text-sm text-[#606060]">/month</span>
             </div>
-            <ul className="space-y-3 mb-8 flex-1">
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> 1 Email Address</li>
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">touch_app</span> Manual Scans</li>
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">history</span> Basic Breach History</li>
+            
+            <ul className="space-y-4 mb-10 flex-1">
+              <li className="flex items-start gap-3 text-sm text-[#9A9A9A]"><span className="material-symbols-outlined text-[#606060] text-lg">check_circle</span> 1 Monitored Email Address</li>
+              <li className="flex items-start gap-3 text-sm text-[#9A9A9A]"><span className="material-symbols-outlined text-[#606060] text-lg">search</span> Manual Threat Scans</li>
+              <li className="flex items-start gap-3 text-sm text-[#9A9A9A]"><span className="material-symbols-outlined text-[#606060] text-lg">history</span> Basic Breach History</li>
             </ul>
-            <button className="w-full py-3 rounded-lg border border-white/10 text-on-surface-variant font-mono text-xs uppercase tracking-widest cursor-default">
+            
+            <button className="w-full py-3.5 rounded-full border border-white/[0.1] text-[#9A9A9A] font-semibold text-xs uppercase tracking-wider cursor-default bg-white/[0.02]">
               Current Plan
             </button>
           </div>
 
-          {/* Family */}
-          <div className="relative glass-panel rounded-2xl p-8 border border-primary/40 flex flex-col glow-primary">
-            <span className="absolute -top-3 right-8 bg-primary text-white font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full">Recommended</span>
-            <h3 className="font-display text-2xl font-bold text-primary mb-1">Family Plan</h3>
-            <p className="font-body text-sm text-on-surface-variant/70 mb-6">Comprehensive automated security for the household.</p>
-            <div className="mb-6">
-              <span className="font-display text-4xl font-bold text-on-surface">${annual ? '10' : '12'}</span>
-              <span className="font-body text-sm text-on-surface-variant/60">/month</span>
+          {/* Family Plan */}
+          <div className="bg-gradient-to-b from-[#141414] to-[#0D0D0D] rounded-3xl p-8 border border-[#FF6A2A]/40 backdrop-blur-xl flex flex-col relative shadow-[0_0_40px_rgba(255,106,42,0.1)]">
+            <div className="absolute -top-3 right-8 bg-[#FF6A2A] text-black font-mono text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Recommended</div>
+            <h3 className="text-xl font-medium text-[#FF6A2A] font-display mb-1">Family Plan</h3>
+            <p className="text-xs text-[#969696] mb-8">Comprehensive automated security for the household.</p>
+            
+            <div className="mb-8">
+              <span className="text-5xl font-medium text-white font-display">${annual ? '10' : '12'}</span>
+              <span className="text-sm text-[#606060]">/month</span>
             </div>
-            <ul className="space-y-3 mb-8 flex-1">
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> Up to 5 Email Addresses</li>
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">sync</span> Automated Daily Scans</li>
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">mail</span> Instant Email Alerts</li>
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">travel_explore</span> Dark Web Monitoring</li>
-              <li className="flex items-center gap-2 font-body text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-lg">support_agent</span> Priority Support</li>
+            
+            <ul className="space-y-4 mb-10 flex-1">
+              <li className="flex items-start gap-3 text-sm text-white"><span className="material-symbols-outlined text-[#FF6A2A] text-lg">check_circle</span> Up to 5 Email Addresses</li>
+              <li className="flex items-start gap-3 text-sm text-white"><span className="material-symbols-outlined text-[#FF6A2A] text-lg">sync</span> Automated Daily Scans</li>
+              <li className="flex items-start gap-3 text-sm text-white"><span className="material-symbols-outlined text-[#FF6A2A] text-lg">mark_email_unread</span> Instant Emergency Alerts (SMS/Email)</li>
+              <li className="flex items-start gap-3 text-sm text-white"><span className="material-symbols-outlined text-[#FF6A2A] text-lg">radar</span> 24/7 Dark Web Monitoring</li>
+              <li className="flex items-start gap-3 text-sm text-white"><span className="material-symbols-outlined text-[#FF6A2A] text-lg">support_agent</span> Priority Analyst Support</li>
             </ul>
+            
             <button
               onClick={() => setShowComingSoon(true)}
-              className="w-full py-3 rounded-lg bg-primary text-white font-mono text-xs uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#FF6A2A] to-[#FF7540] hover:from-[#FF783A] hover:to-[#FF854D] text-black font-semibold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,106,42,0.3)] hover:shadow-[0_0_30px_rgba(255,106,42,0.5)] flex items-center justify-center gap-2"
             >
-              <span className="material-symbols-outlined text-sm">lock</span> Upgrade Plan
+              <span className="material-symbols-outlined text-sm">lock</span> Upgrade Protection
             </button>
             {showComingSoon && (
-              <p className="font-mono text-[11px] text-tertiary text-center mt-3">
-                Payments are coming soon — check back shortly!
+              <p className="font-mono text-[10px] text-[#FF6A2A] text-center mt-4">
+                Payment gateway connection pending — check back shortly!
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-8 mt-12 font-mono text-[11px] text-outline-variant">
-          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">shield</span> 256-bit Encryption</span>
-          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">verified_user</span> Secure Checkout</span>
+        <div className="flex items-center justify-center gap-8 mt-16 font-mono text-[10px] text-[#606060] uppercase tracking-widest">
+          <span className="flex items-center gap-2"><span className="material-symbols-outlined text-sm">shield</span> 256-bit Encryption</span>
+          <span className="flex items-center gap-2"><span className="material-symbols-outlined text-sm">verified_user</span> Secure Checkout</span>
         </div>
       </section>
 
-      <footer className="px-6 md:px-10 py-8 border-t border-white/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="font-body text-xs text-outline-variant">© 2026 BreachAlert Security. All rights reserved.</p>
-          <div className="flex gap-6 font-body text-xs text-outline-variant">
-            <Link to="/support" className="hover:text-primary transition-colors">Support</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

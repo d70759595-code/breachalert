@@ -49,16 +49,15 @@ function Sidebar({ onLogout }) {
 function Settings({ user, onLogout }) {
   const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [smsEnabled, setSmsEnabled] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
     }
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSendOTP(e) {
     e.preventDefault();
@@ -86,9 +85,8 @@ function Settings({ user, onLogout }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Verification failed');
-      setStatusMsg(data.message || 'Phone number verified!');
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setStatusMsg('Phone number and SMS alerts enabled successfully!');
+      setTimeout(() => setStatusMsg(''), 3000);
     } catch (err) {
       setStatusMsg(err.message);
     }

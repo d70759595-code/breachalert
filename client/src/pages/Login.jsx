@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { fetchWithAuth } from '../api';
 
 function Login({ onLogin }) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  
+  const initialEmail = new URLSearchParams(location.search).get('email') || '';
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
+  const [mode, setMode] = useState(initialEmail ? 'signup' : 'login'); // 'login' | 'signup' | 'forgot'
   const [message, setMessage] = useState('');
 
   async function handleSubmit(e) {
