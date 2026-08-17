@@ -1,96 +1,51 @@
-# BreachAlert — Automated Identity Breach Surveillance Platform
+# BreachAlert
 
-BreachAlert is a production-hardened cybersecurity monitoring platform designed to provide automated breach surveillance, identity threat intelligence, and hybrid AI-powered risk scoring.
+Monitor email addresses against public breach databases and get notified when your credentials appear in a data dump.
 
----
+## Features
 
-## 🌟 Key Features
+- Email watch list with ownership verification
+- Real-time breach scanning via XposedOrNot API
+- Redis caching (24h) + BullMQ job queue for rate-limit compliance
+- Breach timeline dashboard with data-type icons
+- JWT auth + optional Google OAuth
+- Free (1 email, manual scans) and Family (5 emails, nightly auto-scan) tiers
 
-- **Automated Breach Surveillance**: Monitor email identities against public dark web breach archives via scheduled sweeps & on-demand scans.
-- **HttpOnly Cookie Authentication**: Secure session management supporting Email/Passphrase, Google OAuth 2.0, and Password Recovery.
-- **Hybrid AI Risk Engine**: Deterministic threat scoring (0-100) paired with structured AI explanations and actionable security recommendations.
-- **Twilio SMS Alert Engine**: Real-time SMS emergency alert dispatches (`TwilioSMSProvider`) for Family-plan verified mobile identities with E.164 phone validation and OTP verification.
-- **Stripe Billing Integration**: Full Stripe Checkout (`/billing/create-checkout-session`), subscription cancellation, and webhook handling.
-- **Deduplicated Background Processing**: Redis & BullMQ queue architecture preventing duplicate scan jobs and respecting provider rate limits.
-- **Vetra Dark Cybersecurity Theme**: Glassmorphism dashboard with real-time health scores and breach incident timelines.
+## Quick Start
 
----
+**Prerequisites:** Node.js 20+, PostgreSQL, Redis
 
-## 🏗️ Target Architecture
-
-```
-React Frontend (Vite + Tailwind CSS)
-       │ (HttpOnly Cookie / Credentials)
-       ▼
-Express REST API (Security Headers, Rate Limiting)
-  ├── PostgreSQL (Users, Monitored Emails, Breach Events, Risk Scores)
-  ├── Stripe Billing (Checkout Sessions & Webhook Handlers)
-  ├── Twilio SMS Provider (E.164 Validation & REST API Dispatch)
-  └── Redis + BullMQ (Scan Worker & Nightly Cron Scheduler)
-            │
-            ▼
-   External Breach Intelligence Provider (XposedOrNot)
-```
-
----
-
-## 🚀 Environment Variables (`.env.example`)
-
-Copy `.env.example` to `.env`:
-
-```env
-PORT=3000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-DATABASE_URL=postgres://postgres:password@localhost:5432/breachalert
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your_super_secret_jwt_key
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# Twilio SMS Alert Provider (Family Plan Alerts)
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_FROM_NUMBER=+15550199283
-TWILIO_ENABLED=true
-
-# Stripe Payment Gateway
-STRIPE_SECRET_KEY=sk_test_your_key
-STRIPE_WEBHOOK_SECRET=whsec_your_secret
-```
-
-### SMS Configuration Modes
-- **`TWILIO_ENABLED=true`**: Requires valid `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`. Dispatches HTTPS REST API calls to Twilio's messaging endpoint. Fails loudly if credentials are missing.
-- **`TWILIO_ENABLED=false`**: Disables SMS dispatches cleanly and logs status.
-
----
-
-## 🛠️ Local Installation & Running
-
-### 1. Backend Server
 ```bash
+cp .env.example .env   # fill in DATABASE_URL, REDIS_URL, JWT_SECRET
+psql $DATABASE_URL -f schema.sql
+
 npm install
-npm start
+npm start              # terminal 1 — API
+npm run worker         # terminal 2 — scan worker + scheduler
+
+cd client && npm install && npm run dev   # terminal 3 — React UI
 ```
 
-### 2. Scan Worker
-```bash
-npm run worker
+Open http://localhost:5173, sign up, add an email, then copy the verification link from the **server console** (email is stubbed in dev).
+
+## Project Structure
+
+```
+server.js              Express API
+worker.js              BullMQ worker + nightly scheduler
+src/scanner/           Breach API client + Redis cache
+src/queue/             Job queue + cron scheduler
+src/routes/            Auth, emails, dashboard endpoints
+src/services/          DB, Redis, mailer
+client/                React + Vite frontend
+docs/API_INTEGRATION.md   Rate limiting & API auth guide
+schema.sql             PostgreSQL schema
 ```
 
-### 3. React Frontend
-```bash
-cd client
-npm install
-npm run dev
-```
+## Documentation
 
-### 4. Running Tests
-```bash
-npx jest server.test.js --forceExit
-```
+- [API Integration Guide](docs/API_INTEGRATION.md) — authentication, caching, rate limits, data retention
 
----
+## License
 
-## 🔒 Security Architecture
-Read [SECURITY.md](SECURITY.md) for full technical documentation on HttpOnly cookie handling, IDOR authorization protections, rate limiting, and secrets management.
+ISC
